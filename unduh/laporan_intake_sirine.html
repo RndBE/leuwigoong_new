@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<style>
+  @page { size: A4; margin: 18mm 16mm; }
+  * { box-sizing: border-box; }
+  body { font-family: -apple-system, "Helvetica Neue", Arial, sans-serif; color: #1a1a1a; font-size: 11px; line-height: 1.5; }
+  h1 { font-size: 20px; margin: 0 0 2px; color: #0d3b66; }
+  h2 { font-size: 14px; margin: 18px 0 6px; color: #0d3b66; border-bottom: 2px solid #0d3b66; padding-bottom: 3px; }
+  h3 { font-size: 12px; margin: 12px 0 4px; color: #1d4e89; }
+  .sub { color: #555; font-size: 10px; margin-bottom: 14px; }
+  .meta { font-size: 10px; color: #555; }
+  code { background: #f0f2f5; padding: 1px 4px; border-radius: 3px; font-family: "SF Mono", Menlo, monospace; font-size: 10px; }
+  pre { background: #1e2430; color: #e6edf3; padding: 10px 12px; border-radius: 5px; font-family: "SF Mono", Menlo, monospace; font-size: 9.5px; line-height: 1.45; overflow-x: auto; white-space: pre-wrap; }
+  pre .c { color: #7ee787; }
+  pre .b { color: #ff7b72; font-weight: bold; }
+  table { width: 100%; border-collapse: collapse; margin: 6px 0; font-size: 10px; }
+  th, td { border: 1px solid #ccd2da; padding: 5px 7px; text-align: left; vertical-align: top; }
+  th { background: #0d3b66; color: #fff; font-weight: 600; }
+  tr:nth-child(even) td { background: #f7f9fc; }
+  .ok { color: #1a7f37; font-weight: 600; }
+  .bad { color: #cf222e; font-weight: 600; }
+  .box { border-left: 4px solid #0d3b66; background: #f0f4f9; padding: 8px 12px; margin: 8px 0; border-radius: 0 4px 4px 0; }
+  .warn { border-left: 4px solid #cf222e; background: #fcf0f0; padding: 8px 12px; margin: 8px 0; border-radius: 0 4px 4px 0; }
+  .tag { display: inline-block; background: #ddeafc; color: #0d3b66; padding: 1px 6px; border-radius: 3px; font-size: 9px; font-weight: 600; }
+  ul { margin: 4px 0 4px 0; padding-left: 18px; }
+  li { margin: 2px 0; }
+  .footer { margin-top: 22px; padding-top: 8px; border-top: 1px solid #ccd2da; font-size: 9px; color: #888; }
+  .q { font-style: italic; color: #444; }
+</style>
+</head>
+<body>
+
+<h1>Laporan Investigasi — Kontrol Pintu Air AWGC Leuwigoong</h1>
+<div class="sub">Temuan: (1) Pintu Intake tidak dapat dibuka &nbsp;•&nbsp; (2) Command Sirine / EWS</div>
+<div class="meta">
+  <b>Sistem:</b> AWGC (Automatic Water Gate Control) — Leuwigoong / Copong, Garut &nbsp;|&nbsp;
+  <b>Tanggal:</b> 4 Juni 2026 &nbsp;|&nbsp;
+  <b>Sifat:</b> Investigasi read-only (tidak ada perintah kontrol yang dikirim, tidak ada file diubah)
+</div>
+
+<div class="box">
+  <b>Ringkasan Eksekutif.</b> Klien melaporkan <b>pintu intake tidak bisa dibuka</b> via web.
+  Setelah eliminasi (topik MQTT sama untuk kedua logger; gating R/S/T &amp; status_controller LOLOS; logger 10349 online),
+  penyebab paling mungkin adalah <b>perbedaan struktur <code>data</code> pada payload MQTT</b>:
+  untuk intake (logger 10349) <code>data</code> dikirim sebagai <b>array datar</b>, sedangkan untuk floodway (10350)
+  sebagai <b>array-of-arrays</b> — padahal keduanya memakai <code>"setting": "multi_gcm"</code>.
+  Perlu konfirmasi tim hardware mengenai bentuk yang diharapkan firmware <code>multi_gcm</code>.
+  Sebagai temuan tambahan, command <b>sirine (EWS / <code>ews_onoff</code>)</b> ditemukan, namun dengan beberapa kejanggalan (lihat Bagian 2).
+</div>
+
+<h2>Konteks Sistem</h2>
+<table>
+  <tr><th>Komponen</th><th>Nilai</th></tr>
+  <tr><td>Broker MQTT</td><td>mqtt.beacontelemetry.com : 8883 (TLS)</td></tr>
+  <tr><td>Topik perintah (command)</td><td><code>AWGC_Garut_Copong</code> — sama untuk logger 10349 &amp; 10350 (dikonfirmasi tim)</td></tr>
+  <tr><td>Topik status balik</td><td><code>kontrol_pintu-{id_logger}</code>, <code>awgc-{id_logger}</code></td></tr>
+  <tr><td>Logger 10349</td><td>Intake 1 (gcm5), Intake 2 (gcm6), Intake 3 (gcm7)</td></tr>
+  <tr><td>Logger 10350</td><td>Floodway 1–3 (gcm1–gcm3), Scouring (gcm4)</td></tr>
+  <tr><td>File kontrol web utama</td><td>application/controllers/Kontrol.php → <code>lanjut_kontrol()</code></td></tr>
+</table>
+
+<h2>BAGIAN 1 — Pintu Intake Tidak Bisa Dibuka</h2>
+
+<h3>1.1 Yang sudah dieliminasi (BUKAN penyebab)</h3>
+<table>
+  <tr><th>Hipotesis</th><th>Hasil cek</th><th>Status</th></tr>
+  <tr><td>Topik MQTT intake berbeda</td><td>Dikonfirmasi tim: 10349 &amp; 10350 subscribe topik yang sama</td><td class="ok">Bukan ini</td></tr>
+  <tr><td>Gating R/S/T + status_controller memblokir</td><td>Sensor intake (sensor9/15/21 &amp; R/S/T) bernilai <code>1</code> semua → kondisi LOLOS</td><td class="ok">Bukan ini</td></tr>
+  <tr><td>Logger 10349 offline</td><td>Data terakhir 2026-06-04 21:37:00 (sama dengan 10350)</td><td class="ok">Bukan ini</td></tr>
+  <tr><td>Key payload salah alamat</td><td>Key <code>"set_10349"</code> dibentuk dinamis dengan benar</td><td class="ok">Bukan ini</td></tr>
+</table>
+
+<h3>1.2 Penyebab paling mungkin: bentuk <code>data</code> berbeda</h3>
+<p>Pada <code>application/controllers/Kontrol.php</code> baris 98–102:</p>
+<pre><span class="b">if</span>($this->session->userdata('idlogger') == '10350'){
+    $items[] = [$gcm, (int)$v['elev'], 1, 0];   <span class="c">// 10350 → array-of-arrays (NESTED)</span>
+}<span class="b">else</span>{
+    $items   = [$gcm, (int)$v['elev'], 1, 0];   <span class="c">// 10349 → array datar (FLAT)</span>
+}</pre>
+<p>Kedua jalur dikirim dengan <code>"setting": "multi_gcm"</code> (baris 134) ke topik yang sama. Perbedaannya hanya pada bentuk <code>data</code>:</p>
+
+<table>
+  <tr><th>Logger</th><th>Payload <code>data</code> yang dikirim</th><th>Dugaan reaksi firmware <code>multi_gcm</code></th></tr>
+  <tr>
+    <td>10350<br>Floodway</td>
+    <td><code>[ ["gcm1", elev, 1, 0] ]</code><br>(array-of-arrays)</td>
+    <td class="ok">Iterasi → tiap elemen berupa array → perintah valid → pintu bergerak ✓</td>
+  </tr>
+  <tr>
+    <td>10349<br>Intake</td>
+    <td><code>[ "gcm5", elev, 1, 0 ]</code><br>(array datar)</td>
+    <td class="bad">Iterasi → tiap elemen = string/angka, bukan array → gagal parse / di-skip → pintu diam ✗</td>
+  </tr>
+</table>
+
+<div class="warn">
+  <b>Hipotesis teknis.</b> Karena <code>multi_gcm</code> berarti "daftar perintah pintu", firmware kemungkinan me-<i>loop</i> isi <code>data</code>
+  dan mengharap tiap elemen berbentuk <code>[gcm, elevasi, status, 0]</code>. Payload intake yang datar membuat firmware
+  mengiterasi elemen bertipe salah → perintah tidak terbentuk → <b>command "terkirim" ke broker tetapi tidak dieksekusi device</b>.
+  Inilah yang konsisten dengan gejala "pintu intake tidak bisa dibuka, tanpa error di web".
+</div>
+
+<div class="box">
+  <b>Pertanyaan untuk tim hardware (mohon dikonfirmasi):</b>
+  <ul>
+    <li>Untuk <code>"setting": "multi_gcm"</code>, apakah firmware mengharap <code>data</code> berupa <b>array-of-arrays</b> <code>[[gcm,elev,status,0]]</code>?</li>
+    <li>Jika menerima array datar <code>["gcm5",elev,1,0]</code>, apakah firmware mengabaikannya / error / crash?</li>
+    <li>Apakah ada log di sisi logger 10349 yang mencatat pesan diterima namun gagal di-parse?</li>
+  </ul>
+</div>
+
+<h3>1.3 Usulan perbaikan (menunggu konfirmasi hardware)</h3>
+<p>Jika firmware mengharap array-of-arrays, samakan kedua cabang menjadi nested untuk semua logger:</p>
+<pre><span class="c">// Kontrol.php — ganti baris 98–102 menjadi satu baris (hapus if/else):</span>
+$items[] = [$gcm, (int)$v['elev'], 1, 0];</pre>
+<p class="meta">Catatan: single-gate per sesi tetap by-design — perbaikan ini hanya membetulkan <i>bentuk</i> payload, bukan menambah multi-pintu.</p>
+
+<h2>BAGIAN 2 — Command Sirine (EWS)</h2>
+<p><span class="tag">JAWABAN</span> <b>Ya, ada command untuk menyalakan sirine</b>, berupa Early Warning System dengan
+<code>"setting": "ews_onoff"</code>. Hanya ditemukan di <code>application/controllers/Api.php</code>
+(fungsi <code>lanjut_kontrol()</code> baris ~1459 dan <code>lanjut_kontrol2()</code> baris ~1639).</p>
+
+<pre>$ews = [
+    <span class="c">"set_10350"</span> => [               <span class="c">// &lt;- selalu hardcoded 10350</span>
+        "command" => "set",
+        "setting" => <span class="c">"ews_onoff"</span>,
+        "data"    => ["1"]            <span class="c">// &lt;- hanya "1" (NYALA), tidak ada "0"</span>
+    ]
+];
+$mqtt->publish('AWGC_Garut_Copong', json_encode($ews), 0);</pre>
+
+<h3>2.1 Kejanggalan yang ditemukan</h3>
+<table>
+  <tr><th>#</th><th>Temuan</th><th>Dampak</th></tr>
+  <tr>
+    <td>1</td>
+    <td>Key EWS <b>selalu di-hardcode</b> <code>"set_10350"</code> di kedua fungsi (Api.php:1460 &amp; 1640), walau yang dikontrol logger 10349.</td>
+    <td class="bad">Sirine yang dinyalakan selalu milik logger 10350 — tidak bisa menyalakan sirine spesifik 10349.</td>
+  </tr>
+  <tr>
+    <td>2</td>
+    <td>Hanya ada perintah <b>NYALA</b> (<code>"data":["1"]</code>). Tidak ditemukan command mematikan (<code>"0"</code>) di seluruh kode.</td>
+    <td class="bad">Mematikan sirine bergantung pada logika di firmware (mis. timer), bukan dikontrol web.</td>
+  </tr>
+  <tr>
+    <td>3</td>
+    <td>Pemicu sirine <b>tidak konsisten</b>: di <code>lanjut_kontrol()</code> sirine dipicu saat <code>id_logger=='10350'</code> (baris 1470); di <code>lanjut_kontrol2()</code> saat <code>id_logger=='10349'</code> (baris 1650).</td>
+    <td class="bad">Perilaku sirine berbeda tergantung endpoint API mana yang dipakai aplikasi.</td>
+  </tr>
+  <tr>
+    <td>4</td>
+    <td>Di jalur kontrol web utama (<code>Kontrol.php</code>) <b>tidak ada</b> command sirine sama sekali.</td>
+    <td class="bad">Operasi pintu lewat web utama tidak memicu peringatan sirine.</td>
+  </tr>
+</table>
+
+<div class="box">
+  <b>Pertanyaan untuk tim hardware (sirine):</b>
+  <ul>
+    <li>Apakah sirine memang hanya satu unit (milik 10350) untuk seluruh lokasi, atau tiap logger punya sirine sendiri?</li>
+    <li>Bagaimana sirine dimatikan — apakah firmware mematikan otomatis setelah durasi tertentu, atau perlu command <code>ews_onoff "0"</code>?</li>
+    <li>Apakah perilaku sirine yang berbeda antar endpoint (lihat temuan #3) memang disengaja?</li>
+  </ul>
+</div>
+
+<h2>Lampiran — Bukti Data (query SELECT, read-only)</h2>
+<table>
+  <tr><th>id_pintu</th><th>id_logger</th><th>nama_pintu</th><th>mqtt_identifier</th><th>ctrl/R/S/T saat dicek</th></tr>
+  <tr><td>214</td><td>10349</td><td>Intake 1</td><td>gcm5</td><td class="ok">1 / 1 / 1 / 1 (LOLOS)</td></tr>
+  <tr><td>215</td><td>10349</td><td>Intake 2</td><td>gcm6</td><td class="ok">1 / 1 / 1 / 1 (LOLOS)</td></tr>
+  <tr><td>216</td><td>10349</td><td>Intake 3</td><td>gcm7</td><td class="ok">1 / 1 / 1 / 1 (LOLOS)</td></tr>
+  <tr><td>210–212</td><td>10350</td><td>Floodway 1–3</td><td>gcm1–gcm3</td><td>—</td></tr>
+  <tr><td>213</td><td>10350</td><td>Scouring</td><td>gcm4</td><td>—</td></tr>
+</table>
+
+<div class="footer">
+  Dokumen ini dibuat untuk keperluan konfirmasi internal ke tim hardware. Seluruh investigasi bersifat read-only;
+  tidak ada perintah kontrol pintu/sirine yang dikirim dan tidak ada perubahan kode pada saat penyusunan laporan ini.
+  Nomor baris merujuk pada kondisi kode per 4 Juni 2026.
+</div>
+
+</body>
+</html>
