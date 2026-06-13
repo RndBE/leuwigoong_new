@@ -75,10 +75,10 @@ $query_builder = TRUE;
 
 $db['default'] = array(
 	'dsn'	=> '',
-	'hostname' => 'localhost',
-	'username' => 'root',
-	'password' => 'madiun2001',
-	'database' => 'leuwigoong',
+	'hostname' => '103.82.241.100',
+	'username' => 'leuwigoong',
+	'password' => 'gantengbanget',
+	'database' => 'db_leuwigoong',
 	'dbdriver' => 'mysqli',
 	'dbprefix' => '',
 	'pconnect' => FALSE,

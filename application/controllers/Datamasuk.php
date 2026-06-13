@@ -420,6 +420,7 @@ class Datamasuk extends CI_Controller
 					'status'=>$nilai_kontrol,
 					'set_value'=>'0'
 				];
+				$this->db->where('id_logger',$this->input->post('id_alat'));
 				$this->db->where('sensor_kontrol',$sensor);
 				$this->db->update('set_tempkontrol',$send_db);
 			}
@@ -496,7 +497,121 @@ class Datamasuk extends CI_Controller
 
 	}
 
+	public function add_awgc_json()
+	{
+		$json = json_decode(file_get_contents('php://input'), true);
 
+		if (!$json || empty($json['id_alat']) || empty($json['hari']) || empty($json['jam'])) {
+			echo json_encode(array('status' => 'error', 'message' => 'Format JSON tidak valid, wajib ada id_alat, hari, dan jam'));
+			return;
+		}
+
+		$id_alat = $json['id_alat'];
+		$waktu = $json['hari'] . ' ' . $json['jam'];
+		if (strtotime($waktu) === false) {
+			echo json_encode(array('status' => 'error', 'message' => 'Format hari/jam tidak valid'));
+			return;
+		}
+
+		// Logger format baru hanya mengirim 50 sensor (objek {nama, nilai, satuan}).
+		// Empat sensor kesehatan logger dipetakan ke kolom lama yang sudah
+		// dibaca dashboard (parameter_sensor & status SD), sisanya 1:1.
+		$map = array(
+			'sensor47' => 'sensor55', // Status_SD
+			'sensor48' => 'sensor56', // Humi_Logger  -> Humidity_Logger
+			'sensor49' => 'sensor57', // Batt_Logger  -> Battery_Logger
+			'sensor50' => 'sensor58', // Temp_Logger  -> Temperature_Logger
+		);
+
+		$data = array(
+			'code_logger' => $id_alat,
+			'waktu' => $waktu,
+		);
+		for ($i = 1; $i <= 58; $i++) {
+			$data['sensor' . $i] = 0;
+		}
+		for ($i = 1; $i <= 50; $i++) {
+			$key = 'sensor' . $i;
+			$kolom = isset($map[$key]) ? $map[$key] : $key;
+			if (isset($json[$key]['nilai']) && is_numeric($json[$key]['nilai'])) {
+				$data[$kolom] = (float) $json[$key]['nilai'];
+			}
+		}
+
+		$this->m_inputdata->add_awgc($data);
+		$this->m_inputdata->update_tempawgc($id_alat, $data);
+
+		// evaluasi status kontrol per pintu, flow sama dengan add_awgc
+		$set_temp = $this->db->where('id_logger', $id_alat)->get('set_tempkontrol')->result_array();
+		$nilai = array();
+		foreach ($set_temp as $vl) {
+			$sensor = $vl['sensor_kontrol'];
+			$nilai_kontrol = isset($data[$sensor]) ? $data[$sensor] : 0;
+			if ($nilai_kontrol == '0') {
+				$send_db = array(
+					'status' => '0',
+					'set_value' => '0',
+				);
+				$this->db->where('id_logger', $id_alat);
+				$this->db->where('sensor_kontrol', $sensor);
+				$this->db->update('set_tempkontrol', $send_db);
+			}
+			$nilai[] = $nilai_kontrol;
+		}
+
+		$def = 0;
+		foreach ($nilai as $v) {
+			if ($v != '0') {
+				$def = $v;
+			}
+		}
+
+		$stts_kontrol = $this->db->where('id_logger', $id_alat)->get('status_kontrol')->row();
+		if ($def == 0) {
+			$send_db2 = array(
+				'status_kontrol' => 0,
+				'session_id' => '0',
+			);
+		} else {
+			// endpoint ini dipanggil device, bukan operator login,
+			// jadi session_id pemegang kontrol tidak diubah
+			$send_db2 = array(
+				'status_kontrol' => 1,
+				'session_id' => $stts_kontrol ? $stts_kontrol->session_id : '0',
+			);
+		}
+		$this->db->where('id_logger', $id_alat);
+		$this->db->update('status_kontrol', $send_db2);
+
+		$send_kontrol = array_merge($send_db2, array('id_logger' => $id_alat));
+
+		$send2 = array(
+			'id_logger' => $id_alat,
+			'waktu' => $waktu,
+		);
+
+		$server = 'mqtt.beacontelemetry.com';
+		$port = 8883;
+		$username = 'userlog';
+		$password = 'b34c0n';
+		$client_id = 'bemqtt-awgcjson';
+		$ca = "/etc/ssl/certs/ca-bundle.crt";
+		$mqtt = new phpMQTT($server, $port, $client_id, $ca);
+		$mqtt_status = 'timeout';
+		if ($mqtt->connect(true, NULL, $username, $password)) {
+			$mqtt->publish('awgc-' . $id_alat, json_encode($send2), 0, false);
+			$mqtt->publish('kontrol_pintu-' . $id_alat, json_encode($send_kontrol), 0, false);
+			$mqtt->close();
+			$mqtt_status = 'terkirim';
+		}
+
+		echo json_encode(array(
+			'status' => 'success',
+			'id_logger' => $id_alat,
+			'waktu' => $waktu,
+			'mqtt' => $mqtt_status,
+		));
+	}
 
 	public function sesi_loggerawgc()
 	{

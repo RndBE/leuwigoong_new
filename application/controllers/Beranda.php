@@ -71,7 +71,7 @@ class Beranda extends CI_Controller
 								$log->status_logger = "Perbaikan";
 							}
 
-							if ($dt->sensor13 == '1') {
+							if ($dt->sensor55 == '1') {
 								$log->sdcard = 'OK';
 							} else {
 								$log->sdcard = 'Bermasalah';
@@ -231,7 +231,7 @@ class Beranda extends CI_Controller
 								$log->status_logger = "Perbaikan";
 							}
 
-							if ($dt->sensor13 == '1') {
+							if ($dt->sensor55 == '1') {
 								$log->sdcard = 'OK';
 							} else {
 								$log->sdcard = 'Bermasalah';
