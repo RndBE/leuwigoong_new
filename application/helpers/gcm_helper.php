@@ -86,3 +86,25 @@ if ( ! function_exists('gcm_gate_set_payload'))
 		));
 	}
 }
+
+if ( ! function_exists('gcm_gate_cmd_payload'))
+{
+	/**
+	 * Bangun payload JSON GCM_GATE perintah motor manual.
+	 * `cmd` "1" = open, "2" = close, "4" = stop (lihat GCM_command_reference.md).
+	 * Dikirim sebagai string sesuai spesifikasi firmware.
+	 *
+	 * @param  int        $gcm_id Module id 1..5
+	 * @param  string|int $cmd    "1" | "2" | "4"
+	 * @return string JSON mis. {"GCM_GATE":{"cmd":"4","id":1}}
+	 */
+	function gcm_gate_cmd_payload($gcm_id, $cmd)
+	{
+		return json_encode(array(
+			'GCM_GATE' => array(
+				'cmd' => (string) $cmd,
+				'id'  => (int) $gcm_id,
+			),
+		));
+	}
+}

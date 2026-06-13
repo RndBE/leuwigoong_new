@@ -23,7 +23,9 @@ class Kontrol extends CI_Controller
 	}
 
 	public function stop_kontrol () {
+		$this->load->helper('gcm');
 		$data = $this->input->post('data');
+		$ids = [];
 		foreach($data as $k => $dt){
 			$send_kontrol = [
 				'set_value'=>'0',
@@ -31,13 +33,19 @@ class Kontrol extends CI_Controller
 			];
 			$this->db->where('id_pintu',$dt['id_pintu']);
 			$this->db->update('set_tempkontrol',$send_kontrol);
+			$ids[] = $dt['id_pintu'];
 		}
+		// Firmware sudah tidak polling HTTP: status=2 di DB saja tidak menghentikan
+		// pintu. Kirim perintah stop GCM (cmd "4") langsung ke topik sub_<logger>.
+		$this->publish_gcm_stop($ids);
 		echo json_encode(['status'=>'success']);
 	}
 
 	public function stop_kontrol2 () {
+		$this->load->helper('gcm');
 		$data = $this->input->post('data');
 		$st = json_decode($data);
+		$ids = [];
 		foreach($st as $k => $dt){
 			$send_kontrol = [
 				'set_value'=>'0',
@@ -45,8 +53,44 @@ class Kontrol extends CI_Controller
 			];
 			$this->db->where('id_pintu',$dt->id_pintu);
 			$this->db->update('set_tempkontrol',$send_kontrol);
+			$ids[] = $dt->id_pintu;
 		}
+		$this->publish_gcm_stop($ids);
 		echo json_encode(['status'=>'success']);
+	}
+
+	/**
+	 * Publish perintah stop GCM (GCM_GATE cmd "4") untuk daftar id_pintu.
+	 * Logger + module id diambil dari mapping binding (gcm_helper), bukan dari
+	 * kolom id_logger DB. Pintu dengan logger berbeda dikirim ke topik masing-masing.
+	 */
+	private function publish_gcm_stop ($id_pintu_list) {
+		$gcm_cmds = [];
+		foreach ($id_pintu_list as $id_pintu) {
+			$pintu = $this->db->where('id_pintu', $id_pintu)->get('t_pintu')->row();
+			if (!$pintu) { continue; }
+			$map = gcm_lookup($pintu->mqtt_identifier);
+			if (!$map) { continue; } // identifier tak dikenal, lewati
+			$gcm_cmds[] = [
+				'topic'   => gcm_topic($map['logger']),
+				'payload' => gcm_gate_cmd_payload($map['id'], '4'),
+			];
+		}
+		if (!$gcm_cmds) { return; }
+
+		$server = 'mqtt.beacontelemetry.com';
+		$port = 8883;
+		$username = 'userlog';
+		$password = 'b34c0n';
+		$client_id = 'bemqtt-awgc-cilicis';
+		$ca = "/etc/ssl/certs/ca-bundle.crt";
+		$mqtt = new phpMQTT($server, $port, $client_id, $ca);
+		if ($mqtt->connect(true, NULL, $username, $password)) {
+			foreach ($gcm_cmds as $cmd) {
+				$mqtt->publish($cmd['topic'], $cmd['payload'], 0);
+			}
+			$mqtt->close();
+		}
 	}
 
 	public function index2 () {

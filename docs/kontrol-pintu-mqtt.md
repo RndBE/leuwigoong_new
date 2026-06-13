@@ -148,25 +148,32 @@ Operator                    Server (PHP)                     Device (logger)
    |                            |  (metode Telemetry), notif FCM |
 ```
 
-**STOP:** tombol STOP → `POST kontrol/stop_kontrol` → `set_tempkontrol`
-di-set `status='2', set_value='0'` (hanya database, tidak ada publish MQTT).
-Device mengetahuinya lewat **polling HTTP** `GET kontrol?idlogger=<id>` yang
-mengembalikan status & set point per pintu:
+**STOP:** tombol STOP → `POST kontrol/stop_kontrol`. Dua hal terjadi:
 
-```json
-{ "p1": "2", "p2": "0", ..., "ps1": "0", "ps2": "0", ... }
-```
+1. `set_tempkontrol` di-set `status='2', set_value='0'` (lock UI + deteksi selesai).
+2. Untuk tiap pintu, publish perintah stop GCM ke topik `sub_<id_logger>` (logger +
+   module id dari mapping `gcm_helper`, bukan kolom `id_logger` DB):
 
-(`pN` = status baris ke-N `set_tempkontrol`, `psN` = set_value; kode status:
-`0` = idle/selesai, `1` = perintah jalan, `2` = stop diminta.)
+   ```json
+   {"GCM_GATE":{"cmd":"4","id":1}}
+   ```
+
+   `cmd "4"` = motor stop (register 15 = 4 → standby), aksi safety langsung tanpa
+   menunggu warning. Lihat `GCM_command_reference.md`.
+
+> Catatan: firmware **tidak lagi polling HTTP** `GET kontrol?idlogger=<id>`, jadi
+> update DB saja tidak menghentikan pintu — perintah `GCM_GATE cmd "4"` di atas yang
+> benar-benar menstop motor. Endpoint polling lama masih ada tetapi tidak dipakai
+> firmware. Kode status `set_tempkontrol`: `0` = idle/selesai, `1` = perintah jalan,
+> `2` = stop diminta.
 
 ## 5. Endpoint HTTP terkait
 
 | Endpoint | Fungsi |
 |---|---|
 | `POST kontrol/lanjut_kontrol` | Mulai kontrol multi-pintu dari web (kode akses + `data[]`) |
-| `POST kontrol/stop_kontrol` | Minta stop (set status=2 di `set_tempkontrol`) |
-| `GET kontrol?idlogger=<id>` | Polling status/set point per pintu (dipakai device) |
+| `POST kontrol/stop_kontrol` | Stop: set status=2 di `set_tempkontrol` + publish `GCM_GATE cmd "4"` ke `sub_<logger>` |
+| `GET kontrol?idlogger=<id>` | Polling status/set point per pintu (legacy; firmware tidak lagi pakai) |
 | `GET kontrol/status_kontrol?id_logger=<id>` | Status kontrol untuk UI |
 | `POST kontrol/selesai_kontrol/<id>` | Catat log_kontrol setelah operasi selesai |
 | `POST api/lanjut_kontrol`, `api/lanjut_kontrol2` | Varian kontrol satu pintu (mobile/API; `setting: gcm`, plus nyalakan EWS `["1"]` + `sleep(10)` sebelum kirim perintah) |
