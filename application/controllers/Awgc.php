@@ -40,6 +40,10 @@ class Awgc extends CI_Controller
 		return debit_scouring($tma_bendung);
 	}
 
+	function debitFloodwayGabungan($tma_bendung) {
+		return debit_floodway_gabungan($tma_bendung);
+	}
+
 	public function submit_kalibrasi()
 	{
 		$this->load->library('PhpMQTT');
@@ -630,6 +634,10 @@ class Awgc extends CI_Controller
 						$nilai_avg = $this->debitPintu3($nilai_avg);
 						$nilai_max = $this->debitPintu3($nilai_max);
 						$nilai_min = $this->debitPintu3($nilai_min);
+					}elseif($this->session->userdata('nama_parameter') == 'Q_Floodway_Gabungan' and $this->session->userdata('idlogger') == '10349'){
+						$nilai_avg = $this->debitFloodwayGabungan($nilai_avg);
+						$nilai_max = $this->debitFloodwayGabungan($nilai_max);
+						$nilai_min = $this->debitFloodwayGabungan($nilai_min);
 					}elseif($this->session->userdata('nama_parameter') == 'Debit_Gabungan' and $this->session->userdata('idlogger') == '10349'){
 						$nilai_avg = $this->debitGabungan($nilai_avg);
 						$nilai_max = $this->debitGabungan($nilai_max);
@@ -695,6 +703,10 @@ class Awgc extends CI_Controller
 						$nilai_avg = $this->debitPintu3($nilai_avg);
 						$nilai_max = $this->debitPintu3($nilai_max);
 						$nilai_min = $this->debitPintu3($nilai_min);
+					}elseif($this->session->userdata('nama_parameter') == 'Q_Floodway_Gabungan' and $this->session->userdata('idlogger') == '10349'){
+						$nilai_avg = $this->debitFloodwayGabungan($nilai_avg);
+						$nilai_max = $this->debitFloodwayGabungan($nilai_max);
+						$nilai_min = $this->debitFloodwayGabungan($nilai_min);
 					}elseif($this->session->userdata('nama_parameter') == 'Debit_Gabungan' and $this->session->userdata('idlogger') == '10349'){
 						$nilai_avg = $this->debitGabungan($nilai_avg);
 						$nilai_max = $this->debitGabungan($nilai_max);
@@ -760,6 +772,10 @@ class Awgc extends CI_Controller
 						$nilai_avg = $this->debitPintu3($nilai_avg);
 						$nilai_max = $this->debitPintu3($nilai_max);
 						$nilai_min = $this->debitPintu3($nilai_min);
+					}elseif($this->session->userdata('nama_parameter') == 'Q_Floodway_Gabungan' and $this->session->userdata('idlogger') == '10349'){
+						$nilai_avg = $this->debitFloodwayGabungan($nilai_avg);
+						$nilai_max = $this->debitFloodwayGabungan($nilai_max);
+						$nilai_min = $this->debitFloodwayGabungan($nilai_min);
 					}elseif($this->session->userdata('nama_parameter') == 'Debit_Gabungan' and $this->session->userdata('idlogger') == '10349'){
 						$nilai_avg = $this->debitGabungan($nilai_avg);
 						$nilai_max = $this->debitGabungan($nilai_max);
@@ -822,6 +838,10 @@ class Awgc extends CI_Controller
 						$nilai_avg = $this->debitPintu3($nilai_avg);
 						$nilai_max = $this->debitPintu3($nilai_max);
 						$nilai_min = $this->debitPintu3($nilai_min);
+					}elseif($this->session->userdata('nama_parameter') == 'Q_Floodway_Gabungan' and $this->session->userdata('idlogger') == '10349'){
+						$nilai_avg = $this->debitFloodwayGabungan($nilai_avg);
+						$nilai_max = $this->debitFloodwayGabungan($nilai_max);
+						$nilai_min = $this->debitFloodwayGabungan($nilai_min);
 					}elseif($this->session->userdata('nama_parameter') == 'Debit_Gabungan' and $this->session->userdata('idlogger') == '10349'){
 						$nilai_avg = $this->debitGabungan($nilai_avg);
 						$nilai_max = $this->debitGabungan($nilai_max);

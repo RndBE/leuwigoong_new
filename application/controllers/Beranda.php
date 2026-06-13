@@ -34,6 +34,10 @@ class Beranda extends CI_Controller
 		return debit_scouring($tma_bendung);
 	}
 
+	function debitFloodwayGabungan($tma_bendung) {
+		return debit_floodway_gabungan($tma_bendung);
+	}
+
 	public function index()
 	{
 		if ($this->session->userdata('logged_in')) {
@@ -107,6 +111,8 @@ class Beranda extends CI_Controller
 									$dta = $this->debitPintu2($dt->$kolom);
 								}elseif($param->nama_parameter == 'Q_Floodway_3' and $id_logger == '10349'){
 									$dta = $this->debitPintu3($dt->$kolom);
+								}elseif($param->nama_parameter == 'Q_Floodway_Gabungan' and $id_logger == '10349'){
+									$dta = $this->debitFloodwayGabungan($dt->$kolom);
 								}elseif($param->nama_parameter == 'Debit_Gabungan' and $id_logger == '10349'){
 									$dta = $this->debitGabungan($dt->$kolom);
 								}elseif($param->nama_parameter == 'Q_Scouring' and $id_logger == '10349'){
@@ -267,6 +273,8 @@ class Beranda extends CI_Controller
 									$dta = $this->debitPintu2($dt->$kolom);
 								}elseif($param->nama_parameter == 'Q_Floodway_3' and $id_logger == '10349'){
 									$dta = $this->debitPintu3($dt->$kolom);
+								}elseif($param->nama_parameter == 'Q_Floodway_Gabungan' and $id_logger == '10349'){
+									$dta = $this->debitFloodwayGabungan($dt->$kolom);
 								}elseif($param->nama_parameter == 'Debit_Gabungan' and $id_logger == '10349'){
 									$dta = $this->debitGabungan($dt->$kolom);
 								}elseif($param->nama_parameter == 'Q_Scouring' and $id_logger == '10349'){
