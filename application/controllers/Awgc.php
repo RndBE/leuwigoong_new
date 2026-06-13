@@ -53,6 +53,11 @@ class Awgc extends CI_Controller
 			]);
 			return;
 		}
+		// TODO(GCM): Kalibrasi TMA BELUM dimigrasi ke format GCM baru.
+		// Firmware kini memakai topik per-logger (sub_<id_logger>) dengan payload
+		// command GCM; envelope "set_<id>"/"setting":"tma" ke topik AWGC_Garut_Copong
+		// di bawah kemungkinan TIDAK lagi didengar firmware. Tunggu definisi format
+		// TMA baru sebelum mengubah ini. Lihat docs/superpowers/specs/2026-06-13-migrasi-gcm-kontrol-pintu-design.md
 		$payload = [
 			"set_$id_logger" => [
 				"command" => "set",

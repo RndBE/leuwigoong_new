@@ -1224,7 +1224,8 @@ class Api extends CI_Controller
 			$encData = json_decode($data);
 			$nama_pintu = '';
 			$id_logger = '';
-			$item = [];
+			$this->load->helper('gcm');
+			$gcm_cmds = [];
 			foreach ($encData as $row) {
 				$pintu = $this->db
 					->where('id_pintu', $row->id_pintu)
@@ -1237,12 +1238,18 @@ class Api extends CI_Controller
 				$gcm = $pintu->mqtt_identifier;
 				$level = $row->level;
 				$nama_pintu = $pintu->nama_pintu;
-				$s[] = [ 
-					'id_pintu'=>$v->id_pintu, 
-					'set_value'=>$level_kontrol, 
-					'status'=>'1' 
+				$s[] = [
+					'id_pintu'=>$row->id_pintu,
+					'set_value'=>$level,
+					'status'=>'1'
 				];
-				$item = [$gcm, $level, "1", "0"];
+				$map = gcm_lookup($gcm);
+				if ($map) {
+					$gcm_cmds[] = [
+						'topic'   => gcm_topic($map['logger']),
+						'payload' => gcm_gate_set_payload($map['id'], $level),
+					];
+				}
 			}
 
 			$send_kontrol = [
@@ -1250,45 +1257,17 @@ class Api extends CI_Controller
 				'waktu'=>date('Y-m-d'),
 				'session_id'=>date('Ymdhis'),
 			];
-			$this->db->update_batch('set_tempkontrol',$s, 'id_pintu');
+			if ($s) { $this->db->update_batch('set_tempkontrol',$s, 'id_pintu'); }
 
 			$this->db->where('id_logger',$this->input->post('id_logger'));
 			$this->db->update('status_kontrol',$send_kontrol);
-			$status = [];
 			if ($mqtt->connect(true, NULL, $username, $password)) {
-				$payload = [
-					"set_" . $id_logger => [
-						"command" => "set",
-						"setting" => "gcm",
-						"data" => $item
-					]
-				];
-				$ews = [
-					"set_10350" => [
-						"command" => "set",
-						"setting" => "ews_onoff",
-						"data" => ["1"]
-					]
-				];
-
-				$json = json_encode($payload);
-				$json_ews = json_encode($ews);
-
-				if($id_logger == '10350'){
-					$mqtt->publish('AWGC_Garut_Copong', $json_ews, 0);
-					$mqtt->publish('kontrol_pintu-'.$id_logger, json_encode($send_kontrol), 0, false);
-					sleep(10);
-					$mqtt->publish('AWGC_Garut_Copong', $json, 0);
-				}else{
-					$mqtt->publish('kontrol_pintu-'.$id_logger, json_encode($send_kontrol), 0, false);
-					$mqtt->publish('AWGC_Garut_Copong', $json, 0);
+				// Format GCM baru: GCM_GATE SET per pintu -> sub_<id_logger>.
+				// Horn pre-warning ditangani firmware (GCM_GATE_WARN), tidak lagi via web.
+				$mqtt->publish('kontrol_pintu-'.$id_logger, json_encode($send_kontrol), 0, false);
+				foreach ($gcm_cmds as $cmd) {
+					$mqtt->publish($cmd['topic'], $cmd['payload'], 0);
 				}
-				$json = json_encode($payload);
-
-				$topic = "Awgc_garut_copong";
-				$mqtt->publish($topic, $json, 0);
-
-				$mqtt->publish('kontrol_pintu', json_encode($send_kontrol), 0, false);
 				$mqtt->close();
 			} else {
 				echo "Time out!\n";
@@ -1404,7 +1383,8 @@ class Api extends CI_Controller
 			$encData = json_decode($data);
 			$nama_pintu = '';
 			$id_logger = '';
-			$item = [];
+			$this->load->helper('gcm');
+			$gcm_cmds = [];
 			foreach ($encData as $row) {
 				$pintu = $this->db
 					->where('id_pintu', $row->id_pintu)
@@ -1417,12 +1397,18 @@ class Api extends CI_Controller
 				$gcm = $pintu->mqtt_identifier;
 				$level = $row->level;
 				$nama_pintu = $pintu->nama_pintu;
-				$s[] = [ 
-					'id_pintu'=>$v->id_pintu, 
-					'set_value'=>$level_kontrol, 
-					'status'=>'1' 
+				$s[] = [
+					'id_pintu'=>$row->id_pintu,
+					'set_value'=>$level,
+					'status'=>'1'
 				];
-				$item = [$gcm, $level, "1", "0"];
+				$map = gcm_lookup($gcm);
+				if ($map) {
+					$gcm_cmds[] = [
+						'topic'   => gcm_topic($map['logger']),
+						'payload' => gcm_gate_set_payload($map['id'], $level),
+					];
+				}
 			}
 
 			$send_kontrol = [
@@ -1430,45 +1416,17 @@ class Api extends CI_Controller
 				'waktu'=>date('Y-m-d'),
 				'session_id'=>date('Ymdhis'),
 			];
-			$this->db->update_batch('set_tempkontrol',$s, 'id_pintu');
+			if ($s) { $this->db->update_batch('set_tempkontrol',$s, 'id_pintu'); }
 
 			$this->db->where('id_logger',$this->input->post('id_logger'));
 			$this->db->update('status_kontrol',$send_kontrol);
-			$status = [];
 			if ($mqtt->connect(true, NULL, $username, $password)) {
-				$payload = [
-					"set_" . $id_logger => [
-						"command" => "set",
-						"setting" => "gcm",
-						"data" => $item
-					]
-				];
-				$ews = [
-					"set_10350" => [
-						"command" => "set",
-						"setting" => "ews_onoff",
-						"data" => ["1"]
-					]
-				];
-
-				$json = json_encode($payload);
-				$json_ews = json_encode($ews);
-
-				if($id_logger == '10349'){
-					$mqtt->publish('AWGC_Garut_Copong', $json_ews, 0);
-					$mqtt->publish('kontrol_pintu-'.$id_logger, json_encode($send_kontrol), 0, false);
-					sleep(10);
-					$mqtt->publish('AWGC_Garut_Copong', $json, 0);
-				}else{
-					$mqtt->publish('kontrol_pintu-'.$id_logger, json_encode($send_kontrol), 0, false);
-					$mqtt->publish('AWGC_Garut_Copong', $json, 0);
+				// Format GCM baru: GCM_GATE SET per pintu -> sub_<id_logger>.
+				// Horn pre-warning ditangani firmware (GCM_GATE_WARN), tidak lagi via web.
+				$mqtt->publish('kontrol_pintu-'.$id_logger, json_encode($send_kontrol), 0, false);
+				foreach ($gcm_cmds as $cmd) {
+					$mqtt->publish($cmd['topic'], $cmd['payload'], 0);
 				}
-				$json = json_encode($payload);
-
-				$topic = "Awgc_garut_copong";
-				$mqtt->publish($topic, $json, 0);
-
-				$mqtt->publish('kontrol_pintu', json_encode($send_kontrol), 0, false);
 				$mqtt->close();
 			} else {
 				echo "Time out!\n";

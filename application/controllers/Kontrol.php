@@ -61,6 +61,7 @@ class Kontrol extends CI_Controller
 	}
 
 	public function lanjut_kontrol(){
+		$this->load->helper('gcm');
 		$kode_akses = $this->db->where('id_user', '7')->get('kode_akses')->row();
 
 		$inp = md5($this->input->post('akses'));
@@ -95,7 +96,7 @@ class Kontrol extends CI_Controller
 						'status'=>'1'
 					];
 					$nama_pintu = $pintu->nama_pintu;
-					$items[] = [$gcm, (int)$v['elev'], 1, 0];
+					$items[] = ['identifier'=>$gcm, 'target'=>(int)$v['elev']];
 
 					$f[] = [
 						'id_pintu'=>$v['id_pintu'],
@@ -123,34 +124,24 @@ class Kontrol extends CI_Controller
 				$this->db->update_batch('set_tempkontrol',$s, 'id_pintu'); 
 				$this->db->where('id_logger',$this->session->userdata('idlogger'));
 				$this->db->update('status_kontrol',$send_kontrol);
-				$status = [];
-				$payload = [
-					"set_" . $this->session->userdata('idlogger') => [
-						"command" => "set",
-						"setting" => "multi_gcm",
-						"data" => $items
-					]
-				];
-
-				$json = json_encode($payload);
-
-				// Matikan EWS / sirine pada semua logger (10349 & 10350)
-				$ews_off = [];
-				foreach (['10349', '10350'] as $log_ews) {
-					$ews_off[] = json_encode([
-						"set_" . $log_ews => [
-							"command" => "set",
-							"setting" => "ews_onoff",
-							"data" => ["0"]
-						]
-					]);
+				// Format GCM baru: satu pesan GCM_GATE per pintu ke topik sub_<id_logger>.
+				// Logger + module id diambil dari mapping binding (gcm_helper), bukan
+				// dari kolom id_logger DB. Pre-warning horn ditangani firmware
+				// (GCM_GATE_WARN), tidak lagi via web (ews_onoff dihapus).
+				$gcm_cmds = [];
+				foreach ($items as $cmd) {
+					$map = gcm_lookup($cmd['identifier']);
+					if (!$map) { continue; } // identifier tak dikenal, lewati
+					$gcm_cmds[] = [
+						'topic'   => gcm_topic($map['logger']),
+						'payload' => gcm_gate_set_payload($map['id'], $cmd['target']),
+					];
 				}
 
 				if ($mqtt->connect(true, NULL, $username, $password)) {
 					$mqtt->publish('kontrol_pintu-'.$this->session->userdata('idlogger'), json_encode($send_kontrol), 0, false);
-					$mqtt->publish('AWGC_Garut_Copong', $json, 0);
-					foreach ($ews_off as $ews_json) {
-						$mqtt->publish('AWGC_Garut_Copong', $ews_json, 0);
+					foreach ($gcm_cmds as $cmd) {
+						$mqtt->publish($cmd['topic'], $cmd['payload'], 0);
 					}
 
 					$mqtt->close();
