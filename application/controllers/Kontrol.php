@@ -151,7 +151,11 @@ class Kontrol extends CI_Controller
 						'message' => 'MQTT timeout'
 					]);
 				}
-				$this->notif_aplikasi($nama_pintu);
+				try {
+					$this->notif_aplikasi($nama_pintu);
+				} catch (Exception $e) {
+					log_message('error', 'Notif FCM (lanjut_kontrol) gagal, kontrol tetap lanjut: ' . $e->getMessage());
+				}
 				echo json_encode(['status'=>'success','data'=>json_encode($f)]);
 			}else{
 				echo json_encode(['status'=>'fail']);
@@ -224,7 +228,11 @@ class Kontrol extends CI_Controller
 			];
 			$this->db->insert('log_kontrol',$data);
 		}
-		$this->notif_aplikasi_selesai();
+		try {
+			$this->notif_aplikasi_selesai();
+		} catch (Exception $e) {
+			log_message('error', 'Notif FCM (selesai_kontrol) gagal, kontrol tetap lanjut: ' . $e->getMessage());
+		}
 		echo json_encode($list_pintu);
 	}
 	
@@ -248,7 +256,11 @@ class Kontrol extends CI_Controller
 			];
 			$this->db->insert('log_kontrol',$data);
 		}
-		$this->notif_aplikasi_selesai();
+		try {
+			$this->notif_aplikasi_selesai();
+		} catch (Exception $e) {
+			log_message('error', 'Notif FCM (selesai_kontrol) gagal, kontrol tetap lanjut: ' . $e->getMessage());
+		}
 		echo json_encode($list_pintu);
 	}
 
@@ -307,7 +319,7 @@ class Kontrol extends CI_Controller
 	}
 	
 	function tes_token () {
-		$serviceAccount = json_decode(file_get_contents('https://leuwigoong.beacontelemetry.com/unduh/copong-783f8-cfe02d37fd4c.json'), true);
+		$serviceAccount = json_decode(@file_get_contents('https://leuwigoong.beacontelemetry.com/unduh/copong-783f8-cfe02d37fd4c.json'), true);
 		$this->load->helper('jwt');
 		$now_seconds = time();
 		$payload = array(
@@ -340,12 +352,13 @@ class Kontrol extends CI_Controller
 			'http' => [
 				'header' => 'Content-Type: application/x-www-form-urlencoded',
 				'method' => 'POST',
-				'content' => http_build_query($data)
+				'content' => http_build_query($data),
+				'ignore_errors' => true
 			]
 		];
 
 		$context = stream_context_create($options);
-		$result = file_get_contents($url, false, $context);
+		$result = @file_get_contents($url, false, $context);
 
 		if ($result === FALSE) {
 			throw new Exception('Error obtaining access token.');
