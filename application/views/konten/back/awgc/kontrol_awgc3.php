@@ -953,7 +953,7 @@ $persen = max(0, min(100, $raw));
 			var inp_kode = $('#kode_akses').val();
 			if(message.destinationName == 'kontrol_pintu-<?= $this->session->userdata("idlogger") ?>') {
 
-				if(dataLogObj.status_kontrol == '1' ){
+				if(dataLogObj.status_kontrol != '0' ){
 					$('.btn-kontrol').prop('disabled',true);
 					$('#submit_kontrol').prop("disabled", true);
 					$('#use_kontrol').removeClass('d-none');
@@ -979,7 +979,7 @@ $persen = max(0, min(100, $raw));
 					method: 'get',
 					dataType: "JSON",
 					success:function(data){
-						if(data.status_kontrol == '1'){
+						if(data.status_kontrol != '0'){
 							if(sts == '1'){
 								$('#resp_log').removeClass('fa-spinner fa-spin').addClass('fa-check');
 								$('#stop').removeClass('d-none');
