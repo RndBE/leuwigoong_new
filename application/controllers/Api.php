@@ -43,6 +43,10 @@ class Api extends CI_Controller
 		return debit_scouring($tma_bendung);
 	}
 
+	function debitFloodwayGabungan($tma_bendung) {
+		return debit_floodway_gabungan($tma_bendung);
+	}
+
 	public function pilihparameter($idlogger)
 	{
 		$data = array();
@@ -358,6 +362,8 @@ class Api extends CI_Controller
 					$nilai_sensor = $this->debitPintu2($nilai_sensor);
 				}elseif($v['nama_parameter'] == 'Q_Floodway_3' and $id_logger == '10349'){
 					$nilai_sensor = $this->debitPintu3($nilai_sensor);
+				}elseif($v['nama_parameter'] == 'Q_Floodway_Gabungan' and $id_logger == '10349'){
+					$nilai_sensor = $this->debitFloodwayGabungan($nilai_sensor);
 				}elseif($v['nama_parameter'] == 'Debit_Gabungan' and $id_logger == '10349'){
 					$nilai_sensor = $this->debitGabungan($nilai_sensor);
 				}elseif($v['nama_parameter'] == 'Q_Scouring' and $id_logger == '10349'){
@@ -612,6 +618,8 @@ class Api extends CI_Controller
 				$n = $this->debitPintu2($n);
 			}elseif($v['nama_parameter'] == 'Q_Floodway_3' and $id_logger == '10349'){
 				$n = $this->debitPintu3($n);
+			}elseif($v['nama_parameter'] == 'Q_Floodway_Gabungan' and $id_logger == '10349'){
+				$n = $this->debitFloodwayGabungan($n);
 			}elseif($v['nama_parameter'] == 'Debit_Gabungan' and $id_logger == '10349'){
 				$n = $this->debitGabungan($n);
 			}elseif($v['nama_parameter'] == 'Q_Scouring' and $id_logger == '10349'){
@@ -761,6 +769,10 @@ class Api extends CI_Controller
 				$nilai_avg = $this->debitPintu3($nilai_avg );	
 				$nilai_min = $this->debitPintu3($nilai_min);	
 				$nilai_max = $this->debitPintu3($nilai_max );
+			}elseif($param->nama_parameter == 'Q_Floodway_Gabungan'){
+				$nilai_avg = $this->debitFloodwayGabungan($nilai_avg);
+				$nilai_min = $this->debitFloodwayGabungan($nilai_min);
+				$nilai_max = $this->debitFloodwayGabungan($nilai_max);
 			}elseif($param->nama_parameter == 'Debit_Gabungan'){
 				$nilai_avg = $this->debitGabungan($nilai_avg );	
 				$nilai_min = $this->debitGabungan($nilai_min);	
@@ -851,6 +863,10 @@ class Api extends CI_Controller
 				$nilai_avg = $this->debitPintu3($nilai_avg );	
 				$nilai_min = $this->debitPintu3($nilai_min);	
 				$nilai_max = $this->debitPintu3($nilai_max );
+			}elseif($param->nama_parameter == 'Q_Floodway_Gabungan'){
+				$nilai_avg = $this->debitFloodwayGabungan($nilai_avg);
+				$nilai_min = $this->debitFloodwayGabungan($nilai_min);
+				$nilai_max = $this->debitFloodwayGabungan($nilai_max);
 			}elseif($param->nama_parameter == 'Debit_Gabungan'){
 				$nilai_avg = $this->debitGabungan($nilai_avg );	
 				$nilai_min = $this->debitGabungan($nilai_min);	
@@ -950,6 +966,10 @@ class Api extends CI_Controller
 				$nilai_avg = $this->debitPintu3($nilai_avg );	
 				$nilai_min = $this->debitPintu3($nilai_min);	
 				$nilai_max = $this->debitPintu3($nilai_max );
+			}elseif($param->nama_parameter == 'Q_Floodway_Gabungan'){
+				$nilai_avg = $this->debitFloodwayGabungan($nilai_avg);
+				$nilai_min = $this->debitFloodwayGabungan($nilai_min);
+				$nilai_max = $this->debitFloodwayGabungan($nilai_max);
 			}elseif($param->nama_parameter == 'Debit_Gabungan'){
 				$nilai_avg = $this->debitGabungan($nilai_avg );	
 				$nilai_min = $this->debitGabungan($nilai_min);	
@@ -1045,6 +1065,10 @@ class Api extends CI_Controller
 				$nilai_avg = $this->debitPintu3($nilai_avg );	
 				$nilai_min = $this->debitPintu3($nilai_min);	
 				$nilai_max = $this->debitPintu3($nilai_max );
+			}elseif($param->nama_parameter == 'Q_Floodway_Gabungan'){
+				$nilai_avg = $this->debitFloodwayGabungan($nilai_avg);
+				$nilai_min = $this->debitFloodwayGabungan($nilai_min);
+				$nilai_max = $this->debitFloodwayGabungan($nilai_max);
 			}elseif($param->nama_parameter == 'Debit_Gabungan'){
 				$nilai_avg = $this->debitGabungan($nilai_avg );	
 				$nilai_min = $this->debitGabungan($nilai_min);	

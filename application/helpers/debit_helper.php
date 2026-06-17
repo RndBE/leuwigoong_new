@@ -138,6 +138,21 @@ if (!function_exists('debit_pintu3')) {
 	}
 }
 
+if (!function_exists('debit_floodway_gabungan')) {
+	/**
+	 * Q Floodway gabungan (m³/s) dari TMA bendung (m) = jumlah 3 pintu Floodway
+	 * (pintu 1 + pintu 2 + pintu 3), TANPA Scouring. Berbeda dari debit_gabungan()
+	 * yang juga menambahkan Scouring. Aturan TMA 0 → 0 ikut berlaku lewat
+	 * debit_pintu*().
+	 */
+	function debit_floodway_gabungan($tma_bendung)
+	{
+		return debit_pintu1($tma_bendung)
+			 + debit_pintu2($tma_bendung)
+			 + debit_pintu3($tma_bendung);
+	}
+}
+
 if (!function_exists('debit_gabungan')) {
 	/**
 	 * Debit gabungan 3 Floodway + Scouring (m³/s) dari TMA bendung (m).

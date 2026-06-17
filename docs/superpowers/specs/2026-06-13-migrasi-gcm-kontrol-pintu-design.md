@@ -27,6 +27,13 @@ tanpa error.
    `GET /kontrol?idlogger=` dan menulis kolom `Status_AWGC` (sensor10/16/22/...).
    STOP tetap `set_tempkontrol.status=2`. Deteksi selesai tetap di
    `Datamasuk.php`.
+
+   > **Update (firmware sudah tidak polling HTTP):** asumsi di atas tidak lagi
+   > berlaku — `set_tempkontrol.status=2` saja tidak menghentikan pintu. STOP kini
+   > juga publish `GCM_GATE cmd "4"` ke `sub_<id_logger>` (lihat
+   > `Kontrol.php::stop_kontrol` + `publish_gcm_stop`, helper
+   > `gcm_gate_cmd_payload`). Update DB tetap dipertahankan untuk lock UI + deteksi
+   > selesai.
 5. **EWS / horn:** hapus `ews_onoff` + `sleep(10)` manual dari web. Pre-warning
    horn jadi tanggung jawab firmware via `GCM_GATE_WARN`.
 6. **TMA kalibrasi:** format baru belum diketahui → JANGAN migrasi dulu.
