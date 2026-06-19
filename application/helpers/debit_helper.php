@@ -24,6 +24,13 @@
  * ATURAN: TMA bendung 0 (atau negatif) berarti tidak ada aliran —
  * semua debit floodway dikembalikan 0.
  *
+ * ATURAN PINTU TERTUTUP: tiap fungsi debit floodway menerima parameter
+ * BUKAAN pintu (opsional). Bila bukaan diketahui dan < FLOODWAY_TUTUP_CM,
+ * pintu dianggap tertutup → debit pintu itu = 0, dan kontribusinya
+ * dikeluarkan dari debit gabungan. Bila bukaan = null (tak diketahui /
+ * data pintu tak terbaca) perilaku lama dipertahankan (TIDAK dinolkan).
+ * Komponen Scouring TIDAK terpengaruh aturan ini (selalu dihitung).
+ *
  * Catatan konsistensi (terverifikasi terhadap Excel):
  *   - Q pintu-2 identik dengan pintu-1 (kolom D = E, dimensi pintu sama),
  *     sehingga keduanya memakai satu tabel yang sama.
@@ -32,6 +39,17 @@
  *     gabungan/scouring = 168.20 (aliran saat muka air tepat di mercu).
  * Input di luar rentang tabel di-clamp ke nilai ujung tabel.
  */
+
+if (!defined('FLOODWAY_TUTUP_CM')) {
+	/**
+	 * Ambang bukaan pintu floodway: bila bukaan < nilai ini, pintu dianggap
+	 * TERTUTUP dan debitnya 0. Bukaan dibandingkan sebagai NILAI SENSOR MENTAH
+	 * (sama seperti tampilan di Awgc::temp_ajax). Jika ternyata nilai sensor
+	 * adalah persen (lihat Awgc::temp_ajax2 yang memakai sensor*batas_atas/100),
+	 * ambang ini perlu disesuaikan ke skala yang sama.
+	 */
+	define('FLOODWAY_TUTUP_CM', 2);
+}
 
 if (!function_exists('debit_normalisasi')) {
 	/** Normalisasi input sensor: "1,25" / "1.25" / angka → float. */
@@ -72,9 +90,13 @@ if (!function_exists('debit_pintu1')) {
 	 * Q Floodway pintu 1 (m³/s) dari TMA bendung (m).
 	 * Excel kolom B → D ("Q x 1 Gate"). Dipakai juga oleh pintu 2
 	 * karena kolom E identik dengan kolom D.
+	 *
+	 * @param mixed $bukaan Bukaan pintu 1 (opsional). < FLOODWAY_TUTUP_CM → 0.
 	 */
-	function debit_pintu1($tma_bendung)
+	function debit_pintu1($tma_bendung, $bukaan = null)
 	{
+		// Aturan: pintu tertutup (bukaan < ambang) → tidak ada aliran.
+		if ($bukaan !== null && debit_normalisasi($bukaan) < FLOODWAY_TUTUP_CM) return 0;
 		// Aturan: TMA bendung 0 → tidak ada aliran, debit floodway 0.
 		if (debit_normalisasi($tma_bendung) <= 0) return 0;
 
@@ -101,11 +123,13 @@ if (!function_exists('debit_pintu2')) {
 	/**
 	 * Q Floodway pintu 2 (m³/s) dari TMA bendung (m).
 	 * Excel kolom B → E ("Q x 2 Gate") — identik dengan kolom D (pintu 1).
-	 * Aturan TMA 0 → 0 ikut berlaku lewat debit_pintu1().
+	 * Aturan TMA 0 → 0 dan aturan bukaan tertutup ikut berlaku lewat debit_pintu1().
+	 *
+	 * @param mixed $bukaan Bukaan pintu 2 (opsional). < FLOODWAY_TUTUP_CM → 0.
 	 */
-	function debit_pintu2($tma_bendung)
+	function debit_pintu2($tma_bendung, $bukaan = null)
 	{
-		return debit_pintu1($tma_bendung);
+		return debit_pintu1($tma_bendung, $bukaan);
 	}
 }
 
@@ -113,9 +137,13 @@ if (!function_exists('debit_pintu3')) {
 	/**
 	 * Q Floodway pintu 3 (m³/s) dari TMA bendung (m).
 	 * Excel kolom B → F ("Q x 3 Gate").
+	 *
+	 * @param mixed $bukaan Bukaan pintu 3 (opsional). < FLOODWAY_TUTUP_CM → 0.
 	 */
-	function debit_pintu3($tma_bendung)
+	function debit_pintu3($tma_bendung, $bukaan = null)
 	{
+		// Aturan: pintu tertutup (bukaan < ambang) → tidak ada aliran.
+		if ($bukaan !== null && debit_normalisasi($bukaan) < FLOODWAY_TUTUP_CM) return 0;
 		// Aturan: TMA bendung 0 → tidak ada aliran, debit floodway 0.
 		if (debit_normalisasi($tma_bendung) <= 0) return 0;
 
@@ -142,14 +170,16 @@ if (!function_exists('debit_floodway_gabungan')) {
 	/**
 	 * Q Floodway gabungan (m³/s) dari TMA bendung (m) = jumlah 3 pintu Floodway
 	 * (pintu 1 + pintu 2 + pintu 3), TANPA Scouring. Berbeda dari debit_gabungan()
-	 * yang juga menambahkan Scouring. Aturan TMA 0 → 0 ikut berlaku lewat
-	 * debit_pintu*().
+	 * yang juga menambahkan Scouring. Aturan TMA 0 → 0 dan aturan bukaan tertutup
+	 * ikut berlaku lewat debit_pintu*() — pintu tertutup tidak menyumbang.
+	 *
+	 * @param mixed $b1,$b2,$b3 Bukaan pintu 1/2/3 (opsional). < FLOODWAY_TUTUP_CM → 0.
 	 */
-	function debit_floodway_gabungan($tma_bendung)
+	function debit_floodway_gabungan($tma_bendung, $b1 = null, $b2 = null, $b3 = null)
 	{
-		return debit_pintu1($tma_bendung)
-			 + debit_pintu2($tma_bendung)
-			 + debit_pintu3($tma_bendung);
+		return debit_pintu1($tma_bendung, $b1)
+			 + debit_pintu2($tma_bendung, $b2)
+			 + debit_pintu3($tma_bendung, $b3);
 	}
 }
 
@@ -158,8 +188,16 @@ if (!function_exists('debit_gabungan')) {
 	 * Debit gabungan 3 Floodway + Scouring (m³/s) dari TMA bendung (m).
 	 * Excel kolom B → G ("Remaks:Q 3FG+S.Gate") = D + E + F + K.
 	 * TMA 0 → 168.20 sesuai Excel (komponen scouring tetap dihitung).
+	 *
+	 * Bila ada pintu floodway tertutup (bukaan < FLOODWAY_TUTUP_CM), kontribusi
+	 * pintu itu DIKURANGI dari nilai tabel (tabel = D+E+F+K, jadi mengurangi
+	 * debit_pintuN menyisakan floodway-aktif + Scouring). Saat tak ada pintu
+	 * tertutup, hasilnya identik dengan tabel resmi (tanpa regresi nilai).
+	 *
+	 * @param mixed $b1,$b2,$b3 Bukaan pintu 1/2/3 (opsional). < FLOODWAY_TUTUP_CM
+	 *   → kontribusi pintu itu dikeluarkan dari gabungan. Scouring tidak terpengaruh.
 	 */
-	function debit_gabungan($tma_bendung)
+	function debit_gabungan($tma_bendung, $b1 = null, $b2 = null, $b3 = null)
 	{
 		static $table = [
 			[0.000,168.20],
@@ -176,7 +214,16 @@ if (!function_exists('debit_gabungan')) {
 			[4.750,985.31],[5.000,1045.92],[5.250,1107.93],[5.500,1171.21],[5.750,1235.76]
 		];
 
-		return debit_interpolasi($table, $tma_bendung);
+		$total = debit_interpolasi($table, $tma_bendung);
+
+		// Keluarkan kontribusi pintu floodway yang tertutup (bukaan < ambang).
+		// debit_pintuN() di sini dipanggil TANPA bukaan → nilai "seandainya
+		// terbuka", lalu dikurangi. Scouring (bagian tabel) tetap utuh.
+		if ($b1 !== null && debit_normalisasi($b1) < FLOODWAY_TUTUP_CM) $total -= debit_pintu1($tma_bendung);
+		if ($b2 !== null && debit_normalisasi($b2) < FLOODWAY_TUTUP_CM) $total -= debit_pintu2($tma_bendung);
+		if ($b3 !== null && debit_normalisasi($b3) < FLOODWAY_TUTUP_CM) $total -= debit_pintu3($tma_bendung);
+
+		return $total;
 	}
 }
 
@@ -238,5 +285,52 @@ if (!function_exists('debit_by_elevasi')) {
 		];
 
 		return debit_interpolasi($table, $elevasi);
+	}
+}
+
+if (!function_exists('debit_floodway_bukaan')) {
+	/**
+	 * Bukaan pintu Floodway 1/2/3 (nilai sensor_level dari logger pintu, mis. 10350).
+	 * Dipakai oleh fungsi debit untuk menentukan pintu tertutup (bukaan <
+	 * FLOODWAY_TUTUP_CM → debit 0). Mapping diambil dari tabel t_pintu
+	 * (nama_pintu "Floodway N" → id_logger + sensor_level) supaya tidak hardcode
+	 * nomor sensor. Hasil di-cache statik per-request (dipanggil banyak kali).
+	 *
+	 * Bukaan yang tak terbaca (data pintu kosong) dikembalikan null = "tak
+	 * diketahui" → pemanggil TIDAK menolkan debit (perilaku lama dipertahankan).
+	 *
+	 * @return array [1 => bukaan1|null, 2 => bukaan2|null, 3 => bukaan3|null]
+	 */
+	function debit_floodway_bukaan()
+	{
+		static $cache = null;
+		if ($cache !== null) return $cache;
+
+		$cache = [1 => null, 2 => null, 3 => null];
+
+		$CI =& get_instance();
+		$CI->load->database();
+
+		$gates = $CI->db->like('nama_pintu', 'Floodway')->get('t_pintu')->result_array();
+
+		$temp_row = []; // cache baris temp_awgc per id_logger pintu
+		foreach ($gates as $g) {
+			// "Floodway 1" → 1
+			if (!preg_match('/(\d+)/', $g['nama_pintu'], $m)) continue;
+			$n = (int) $m[1];
+			if ($n < 1 || $n > 3) continue;
+
+			$id_logger = $g['id_logger'];
+			if (!array_key_exists($id_logger, $temp_row)) {
+				$temp_row[$id_logger] = $CI->db->where('code_logger', $id_logger)->get('temp_awgc')->row();
+			}
+			$row   = $temp_row[$id_logger];
+			$kolom = $g['sensor_level'];
+			if ($row && isset($row->$kolom)) {
+				$cache[$n] = debit_normalisasi($row->$kolom);
+			}
+		}
+
+		return $cache;
 	}
 }

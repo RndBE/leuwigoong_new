@@ -15,19 +15,23 @@ class Beranda extends CI_Controller
 	// Aturan: TMA bendung 0 => semua debit floodway = 0.
 
 	function debitPintu1($tma_bendung) {
-		return debit_pintu1($tma_bendung);
+		$b = debit_floodway_bukaan();
+		return debit_pintu1($tma_bendung, $b[1]);
 	}
 
 	function debitPintu2($tma_bendung) {
-		return debit_pintu2($tma_bendung);
+		$b = debit_floodway_bukaan();
+		return debit_pintu2($tma_bendung, $b[2]);
 	}
 
 	function debitPintu3($tma_bendung) {
-		return debit_pintu3($tma_bendung);
+		$b = debit_floodway_bukaan();
+		return debit_pintu3($tma_bendung, $b[3]);
 	}
 
 	function debitGabungan($tma_bendung) {
-		return debit_gabungan($tma_bendung);
+		$b = debit_floodway_bukaan();
+		return debit_gabungan($tma_bendung, $b[1], $b[2], $b[3]);
 	}
 
 	function debitScouring($tma_bendung) {
@@ -35,7 +39,8 @@ class Beranda extends CI_Controller
 	}
 
 	function debitFloodwayGabungan($tma_bendung) {
-		return debit_floodway_gabungan($tma_bendung);
+		$b = debit_floodway_bukaan();
+		return debit_floodway_gabungan($tma_bendung, $b[1], $b[2], $b[3]);
 	}
 
 	public function index()
