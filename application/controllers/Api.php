@@ -52,6 +52,34 @@ class Api extends CI_Controller
 		return debit_floodway_gabungan($tma_bendung, $b[1], $b[2], $b[3]);
 	}
 
+	// === Debit floodway untuk ANALISA HISTORIS (per periode) ===
+	// Berbeda dari wrapper di atas (debitPintu1 dst.) yang memakai bukaan
+	// TERKINI (temp_awgc) — cocok untuk tampilan realtime. Untuk analisa,
+	// tiap periode harus memakai bukaan PADA PERIODE ITU (debit_floodway_bukaan_historis),
+	// supaya periode lampau tidak ikut ternol saat pintu sedang tertutup sekarang.
+
+	// True bila parameter ini perlu peta bukaan floodway per periode.
+	private function debitButuhBukaan($nama_param) {
+		return in_array($nama_param, [
+			'Q_Floodway_1', 'Q_Floodway_2', 'Q_Floodway_3',
+			'Q_Floodway_Gabungan', 'Debit_Gabungan'
+		], true);
+	}
+
+	// Transform satu nilai TMA → debit untuk periode tertentu memakai bukaan
+	// periode ($bk = [1=>?,2=>?,3=>?]). Param non-debit dikembalikan apa adanya.
+	private function debitPeriode($nama_param, $tma, $bk) {
+		switch ($nama_param) {
+			case 'Q_Floodway_1':        return debit_pintu1($tma, $bk[1]);
+			case 'Q_Floodway_2':        return debit_pintu2($tma, $bk[2]);
+			case 'Q_Floodway_3':        return debit_pintu3($tma, $bk[3]);
+			case 'Q_Floodway_Gabungan': return debit_floodway_gabungan($tma, $bk[1], $bk[2], $bk[3]);
+			case 'Debit_Gabungan':      return debit_gabungan($tma, $bk[1], $bk[2], $bk[3]);
+			case 'Q_Scouring':          return debit_scouring($tma);
+			default:                    return $tma;
+		}
+	}
+
 	public function pilihparameter($idlogger)
 	{
 		$data = array();
@@ -758,36 +786,22 @@ class Api extends CI_Controller
 			->get()
 			->result();
 
+		// Bukaan pintu floodway PER PERIODE (per jam): tiap periode di-gate pakai
+		// bukaan pintu pada periode itu, bukan bukaan terkini (temp_awgc).
+		$bukaanMap = $this->debitButuhBukaan($param->nama_parameter)
+			? debit_floodway_bukaan_historis(
+				"waktu >= '".$tanggal." 00:00' and waktu <= '".$tanggal." 23:59'",
+				"HOUR(waktu),DAY(waktu),MONTH(waktu),YEAR(waktu)",
+				'Y-m-d H:00')
+			: [];
+
 		foreach($hsl as $d){
-			$nilai_avg = $d->$namaSensor;
-			$nilai_min = $d->min;
-			$nilai_max = $d->max;
-			if($param->nama_parameter == 'Q_Floodway_1'){
-				$nilai_avg = $this->debitPintu1($nilai_avg );	
-				$nilai_min = $this->debitPintu1($nilai_min);	
-				$nilai_max = $this->debitPintu1($nilai_max );
-			}elseif($param->nama_parameter == 'Q_Floodway_2'){
-				$nilai_avg = $this->debitPintu2($nilai_avg );	
-				$nilai_min = $this->debitPintu2($nilai_min);	
-				$nilai_max = $this->debitPintu2($nilai_max );
-			}elseif($param->nama_parameter == 'Q_Floodway_3'){
-				$nilai_avg = $this->debitPintu3($nilai_avg );	
-				$nilai_min = $this->debitPintu3($nilai_min);	
-				$nilai_max = $this->debitPintu3($nilai_max );
-			}elseif($param->nama_parameter == 'Q_Floodway_Gabungan'){
-				$nilai_avg = $this->debitFloodwayGabungan($nilai_avg);
-				$nilai_min = $this->debitFloodwayGabungan($nilai_min);
-				$nilai_max = $this->debitFloodwayGabungan($nilai_max);
-			}elseif($param->nama_parameter == 'Debit_Gabungan'){
-				$nilai_avg = $this->debitGabungan($nilai_avg );	
-				$nilai_min = $this->debitGabungan($nilai_min);	
-				$nilai_max = $this->debitGabungan($nilai_max );
-			}elseif($param->nama_parameter == 'Q_Scouring'){
-				$nilai_avg = $this->debitScouring($nilai_avg );	
-				$nilai_min = $this->debitScouring($nilai_min);	
-				$nilai_max = $this->debitScouring($nilai_max );
-			}
-			$waktu[] = date('Y-m-d H:00',strtotime($d->waktu));
+			$key = date('Y-m-d H:00',strtotime($d->waktu));
+			$bk  = isset($bukaanMap[$key]) ? $bukaanMap[$key] : [1=>null,2=>null,3=>null];
+			$nilai_avg = $this->debitPeriode($param->nama_parameter, $d->$namaSensor, $bk);
+			$nilai_min = $this->debitPeriode($param->nama_parameter, $d->min, $bk);
+			$nilai_max = $this->debitPeriode($param->nama_parameter, $d->max, $bk);
+			$waktu[] = $key;
 			$data[] = number_format($nilai_avg,2,'.','');
 			$min[] = number_format($nilai_min,2,'.','');
 			$max[] = number_format($nilai_max,2,'.','');
@@ -852,36 +866,22 @@ class Api extends CI_Controller
 
 		$hsl = $query_data->result();
 
+		// Bukaan pintu floodway PER PERIODE (per hari): tiap hari di-gate pakai
+		// bukaan pintu pada hari itu, bukan bukaan terkini (temp_awgc).
+		$bukaanMap = $this->debitButuhBukaan($param->nama_parameter)
+			? debit_floodway_bukaan_historis(
+				"waktu >= '".$tanggal."-01 00:00' and waktu <= '".$tanggal."-31 23:59'",
+				"DAY(waktu),MONTH(waktu),YEAR(waktu)",
+				'Y-m-d')
+			: [];
+
 		foreach ($hsl as $datalog) {
-			$nilai_avg = $datalog->$namaSensor;
-			$nilai_min = $datalog->min;
-			$nilai_max = $datalog->max;
-			if($param->nama_parameter == 'Q_Floodway_1'){
-				$nilai_avg = $this->debitPintu1($nilai_avg );	
-				$nilai_min = $this->debitPintu1($nilai_min);	
-				$nilai_max = $this->debitPintu1($nilai_max );
-			}elseif($param->nama_parameter == 'Q_Floodway_2'){
-				$nilai_avg = $this->debitPintu2($nilai_avg );	
-				$nilai_min = $this->debitPintu2($nilai_min);	
-				$nilai_max = $this->debitPintu2($nilai_max );
-			}elseif($param->nama_parameter == 'Q_Floodway_3'){
-				$nilai_avg = $this->debitPintu3($nilai_avg );	
-				$nilai_min = $this->debitPintu3($nilai_min);	
-				$nilai_max = $this->debitPintu3($nilai_max );
-			}elseif($param->nama_parameter == 'Q_Floodway_Gabungan'){
-				$nilai_avg = $this->debitFloodwayGabungan($nilai_avg);
-				$nilai_min = $this->debitFloodwayGabungan($nilai_min);
-				$nilai_max = $this->debitFloodwayGabungan($nilai_max);
-			}elseif($param->nama_parameter == 'Debit_Gabungan'){
-				$nilai_avg = $this->debitGabungan($nilai_avg );	
-				$nilai_min = $this->debitGabungan($nilai_min);	
-				$nilai_max = $this->debitGabungan($nilai_max );
-			}elseif($param->nama_parameter == 'Q_Scouring'){
-				$nilai_avg = $this->debitScouring($nilai_avg );	
-				$nilai_min = $this->debitScouring($nilai_min);	
-				$nilai_max = $this->debitScouring($nilai_max );
-			}
-			$waktu[] = date('Y-m-d', strtotime($datalog->waktu));
+			$key = date('Y-m-d', strtotime($datalog->waktu));
+			$bk  = isset($bukaanMap[$key]) ? $bukaanMap[$key] : [1=>null,2=>null,3=>null];
+			$nilai_avg = $this->debitPeriode($param->nama_parameter, $datalog->$namaSensor, $bk);
+			$nilai_min = $this->debitPeriode($param->nama_parameter, $datalog->min, $bk);
+			$nilai_max = $this->debitPeriode($param->nama_parameter, $datalog->max, $bk);
+			$waktu[] = $key;
 			$data[] = number_format($nilai_avg, 2,'.','');
 			$min[] = number_format($nilai_min, 2,'.','');
 			$max[] = number_format($nilai_max, 2,'.','');
@@ -955,36 +955,22 @@ class Api extends CI_Controller
 		$dbt = 0;
 		$hsl = $query_data->result();
 
+		// Bukaan pintu floodway PER PERIODE (per jam) untuk rentang tanggal:
+		// tiap periode di-gate pakai bukaan pada periode itu, bukan bukaan terkini.
+		$bukaanMap = $this->debitButuhBukaan($param->nama_parameter)
+			? debit_floodway_bukaan_historis(
+				"waktu >= '".$awal."' and waktu <= '".$akhir." 23:59:00'",
+				"HOUR(waktu),DAY(waktu),MONTH(waktu),YEAR(waktu)",
+				'Y-m-d H:00')
+			: [];
+
 		foreach ($hsl as $datalog) {
-			$nilai_avg = $datalog->$namaSensor;
-			$nilai_min = $datalog->min;
-			$nilai_max = $datalog->max;
-			if($param->nama_parameter == 'Q_Floodway_1'){
-				$nilai_avg = $this->debitPintu1($nilai_avg );	
-				$nilai_min = $this->debitPintu1($nilai_min);	
-				$nilai_max = $this->debitPintu1($nilai_max );
-			}elseif($param->nama_parameter == 'Q_Floodway_2'){
-				$nilai_avg = $this->debitPintu2($nilai_avg );	
-				$nilai_min = $this->debitPintu2($nilai_min);	
-				$nilai_max = $this->debitPintu2($nilai_max );
-			}elseif($param->nama_parameter == 'Q_Floodway_3'){
-				$nilai_avg = $this->debitPintu3($nilai_avg );	
-				$nilai_min = $this->debitPintu3($nilai_min);	
-				$nilai_max = $this->debitPintu3($nilai_max );
-			}elseif($param->nama_parameter == 'Q_Floodway_Gabungan'){
-				$nilai_avg = $this->debitFloodwayGabungan($nilai_avg);
-				$nilai_min = $this->debitFloodwayGabungan($nilai_min);
-				$nilai_max = $this->debitFloodwayGabungan($nilai_max);
-			}elseif($param->nama_parameter == 'Debit_Gabungan'){
-				$nilai_avg = $this->debitGabungan($nilai_avg );	
-				$nilai_min = $this->debitGabungan($nilai_min);	
-				$nilai_max = $this->debitGabungan($nilai_max );
-			}elseif($param->nama_parameter == 'Q_Scouring'){
-				$nilai_avg = $this->debitScouring($nilai_avg );	
-				$nilai_min = $this->debitScouring($nilai_min);	
-				$nilai_max = $this->debitScouring($nilai_max );
-			}
-			$waktu[] = date('Y-m-d H', strtotime($datalog->waktu)) . ':00';
+			$key = date('Y-m-d H', strtotime($datalog->waktu)) . ':00';
+			$bk  = isset($bukaanMap[$key]) ? $bukaanMap[$key] : [1=>null,2=>null,3=>null];
+			$nilai_avg = $this->debitPeriode($param->nama_parameter, $datalog->$namaSensor, $bk);
+			$nilai_min = $this->debitPeriode($param->nama_parameter, $datalog->min, $bk);
+			$nilai_max = $this->debitPeriode($param->nama_parameter, $datalog->max, $bk);
+			$waktu[] = $key;
 			$data[] = number_format($nilai_avg, 2,'.','');
 			$min[] = number_format($nilai_min, 2,'.','');
 			$max[] = number_format($nilai_max, 2,'.','');
@@ -1054,36 +1040,23 @@ class Api extends CI_Controller
 
 		$query_data = $this->db->query("SELECT waktu,DATE(waktu) as tanggal,MONTH(waktu) as bulan," . $select . ",min(" . $sensor . ") as min,max(" . $sensor . ") as max FROM " . $tabel . " where code_logger='" . $idlogger . "' and waktu >= '" . $tanggal . "-01-01 00:00' and waktu <= '" . $tanggal . "-12-31 23:59' group by MONTH(waktu),YEAR(waktu);");
 		$dbt = 0;
+
+		// Bukaan pintu floodway PER PERIODE (per bulan): tiap bulan di-gate pakai
+		// bukaan pintu pada bulan itu, bukan bukaan terkini (temp_awgc).
+		$bukaanMap = $this->debitButuhBukaan($param->nama_parameter)
+			? debit_floodway_bukaan_historis(
+				"waktu >= '".$tanggal."-01-01 00:00' and waktu <= '".$tanggal."-12-31 23:59'",
+				"MONTH(waktu),YEAR(waktu)",
+				'Y-m')
+			: [];
+
 		foreach ($query_data->result() as $datalog) {
-			$nilai_avg = $datalog->$namaSensor;
-			$nilai_min = $datalog->min;
-			$nilai_max = $datalog->max;
-			if($param->nama_parameter == 'Q_Floodway_1'){
-				$nilai_avg = $this->debitPintu1($nilai_avg );	
-				$nilai_min = $this->debitPintu1($nilai_min);	
-				$nilai_max = $this->debitPintu1($nilai_max );
-			}elseif($param->nama_parameter == 'Q_Floodway_2'){
-				$nilai_avg = $this->debitPintu2($nilai_avg );	
-				$nilai_min = $this->debitPintu2($nilai_min);	
-				$nilai_max = $this->debitPintu2($nilai_max );
-			}elseif($param->nama_parameter == 'Q_Floodway_3'){
-				$nilai_avg = $this->debitPintu3($nilai_avg );	
-				$nilai_min = $this->debitPintu3($nilai_min);	
-				$nilai_max = $this->debitPintu3($nilai_max );
-			}elseif($param->nama_parameter == 'Q_Floodway_Gabungan'){
-				$nilai_avg = $this->debitFloodwayGabungan($nilai_avg);
-				$nilai_min = $this->debitFloodwayGabungan($nilai_min);
-				$nilai_max = $this->debitFloodwayGabungan($nilai_max);
-			}elseif($param->nama_parameter == 'Debit_Gabungan'){
-				$nilai_avg = $this->debitGabungan($nilai_avg );	
-				$nilai_min = $this->debitGabungan($nilai_min);	
-				$nilai_max = $this->debitGabungan($nilai_max );
-			}elseif($param->nama_parameter == 'Q_Scouring'){
-				$nilai_avg = $this->debitScouring($nilai_avg );	
-				$nilai_min = $this->debitScouring($nilai_min);	
-				$nilai_max = $this->debitScouring($nilai_max );
-			}
-			$waktu[] = date('Y-m', strtotime($datalog->waktu));
+			$key = date('Y-m', strtotime($datalog->waktu));
+			$bk  = isset($bukaanMap[$key]) ? $bukaanMap[$key] : [1=>null,2=>null,3=>null];
+			$nilai_avg = $this->debitPeriode($param->nama_parameter, $datalog->$namaSensor, $bk);
+			$nilai_min = $this->debitPeriode($param->nama_parameter, $datalog->min, $bk);
+			$nilai_max = $this->debitPeriode($param->nama_parameter, $datalog->max, $bk);
+			$waktu[] = $key;
 			$data2[] = number_format($nilai_avg, 2,'.','');
 			$min2[] = number_format($nilai_min, 2,'.','');
 			$max2[] = number_format($nilai_max, 2,'.','');

@@ -334,3 +334,78 @@ if (!function_exists('debit_floodway_bukaan')) {
 		return $cache;
 	}
 }
+
+if (!function_exists('debit_floodway_bukaan_historis')) {
+	/**
+	 * Bukaan pintu Floodway 1/2/3 PER PERIODE dari tabel historis (padanan
+	 * debit_floodway_bukaan() yang hanya membaca nilai TERKINI di temp_awgc).
+	 *
+	 * Dipakai oleh analisa historis (analisapertanggal/perbulan/perrange/
+	 * pertahun): tiap periode harus memakai bukaan pintu PADA PERIODE ITU,
+	 * bukan bukaan saat ini. Tanpa ini, bila pintu sedang tertutup sekarang,
+	 * seluruh periode lampau ikut ternol ("kosong").
+	 *
+	 * Mapping pintu diambil dari t_pintu (nama_pintu "Floodway N" → id_logger +
+	 * sensor_level), sama seperti debit_floodway_bukaan(). Tabel historis
+	 * diambil dari kategori_logger (temp_data='temp_awgc' → tabel), fallback
+	 * 'awgc'. Nilai per periode = AVG(sensor_level) pada grouping yang sama
+	 * dengan query analisa, lalu dipetakan dengan kunci waktu yang formatnya
+	 * IDENTIK dengan kunci $waktu[] di endpoint pemanggil.
+	 *
+	 * Periode tanpa baris bukaan → key tidak ada di peta → pemanggil memakai
+	 * null = "tak diketahui" → debit TIDAK dinolkan (perilaku lama dipertahankan).
+	 *
+	 * @param string $kondisi_waktu Klausa SQL waktu, mis.
+	 *        "waktu >= '2026-06-20 00:00' and waktu <= '2026-06-20 23:59'".
+	 * @param string $group_sql Ekspresi GROUP BY, mis.
+	 *        "HOUR(waktu),DAY(waktu),MONTH(waktu),YEAR(waktu)".
+	 * @param string $key_format Format date() untuk kunci peta, mis. 'Y-m-d H:00'.
+	 * @return array [ key => [1 => b1|null, 2 => b2|null, 3 => b3|null] ]
+	 */
+	function debit_floodway_bukaan_historis($kondisi_waktu, $group_sql, $key_format)
+	{
+		$CI =& get_instance();
+		$CI->load->database();
+
+		$peta = [];
+
+		// Tabel historis padanan temp_awgc (current → historis).
+		$kat = $CI->db->where('temp_data', 'temp_awgc')->get('kategori_logger')->row();
+		$tabel_hist = ($kat && !empty($kat->tabel)) ? $kat->tabel : 'awgc';
+
+		$gates = $CI->db->like('nama_pintu', 'Floodway')->get('t_pintu')->result_array();
+
+		// Kelompokkan kolom sensor_level per id_logger: [id_logger => [n => kolom]].
+		$per_logger = [];
+		foreach ($gates as $g) {
+			if (!preg_match('/(\d+)/', $g['nama_pintu'], $m)) continue;
+			$n = (int) $m[1];
+			if ($n < 1 || $n > 3) continue;
+			$per_logger[$g['id_logger']][$n] = $g['sensor_level'];
+		}
+
+		foreach ($per_logger as $id_logger => $kolom_map) {
+			$sel = ['MAX(waktu) AS waktu'];
+			foreach ($kolom_map as $n => $kol) {
+				$sel[] = "AVG($kol) AS bukaan_$n";
+			}
+			$sql = 'SELECT ' . implode(',', $sel)
+				 . ' FROM ' . $tabel_hist
+				 . " WHERE code_logger='" . $id_logger . "' AND " . $kondisi_waktu
+				 . ' GROUP BY ' . $group_sql;
+
+			foreach ($CI->db->query($sql)->result() as $r) {
+				$key = date($key_format, strtotime($r->waktu));
+				if (!isset($peta[$key])) $peta[$key] = [1 => null, 2 => null, 3 => null];
+				foreach ($kolom_map as $n => $kol) {
+					$f = 'bukaan_' . $n;
+					if (isset($r->$f) && $r->$f !== null) {
+						$peta[$key][$n] = debit_normalisasi($r->$f);
+					}
+				}
+			}
+		}
+
+		return $peta;
+	}
+}
