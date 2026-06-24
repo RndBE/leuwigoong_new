@@ -49,6 +49,31 @@ class Awgc extends CI_Controller
 		return debit_floodway_gabungan($tma_bendung, $b[1], $b[2], $b[3]);
 	}
 
+	// === Debit floodway untuk ANALISA HISTORIS (per periode) ===
+	// Wrapper di atas (debitPintu1 dst.) memakai bukaan TERKINI (temp_awgc) —
+	// cocok utk tampilan realtime, TAPI keliru untuk analisa: bila pintu kini
+	// tertutup, semua periode lampau ikut ternol. Untuk analisa, tiap periode
+	// di-gate pakai bukaan PADA PERIODE ITU (debit_floodway_bukaan_historis).
+
+	private function debitButuhBukaan($nama_param) {
+		return in_array($nama_param, [
+			'Q_Floodway_1', 'Q_Floodway_2', 'Q_Floodway_3',
+			'Q_Floodway_Gabungan', 'Debit_Gabungan'
+		], true);
+	}
+
+	private function debitPeriode($nama_param, $tma, $bk) {
+		switch ($nama_param) {
+			case 'Q_Floodway_1':        return debit_pintu1($tma, $bk[1]);
+			case 'Q_Floodway_2':        return debit_pintu2($tma, $bk[2]);
+			case 'Q_Floodway_3':        return debit_pintu3($tma, $bk[3]);
+			case 'Q_Floodway_Gabungan': return debit_floodway_gabungan($tma, $bk[1], $bk[2], $bk[3]);
+			case 'Debit_Gabungan':      return debit_gabungan($tma, $bk[1], $bk[2], $bk[3]);
+			case 'Q_Scouring':          return debit_scouring($tma);
+			default:                    return $tma;
+		}
+	}
+
 	public function submit_kalibrasi()
 	{
 		$this->load->library('PhpMQTT');
@@ -622,38 +647,27 @@ class Awgc extends CI_Controller
 
 				$query_data = $this->db->query("SELECT waktu, HOUR(waktu) as jam,DAY(waktu) as hari,MONTH(waktu) as bulan,YEAR(waktu) as tahun," . $select . ",min(" . $kolom . ") as min,max(" . $kolom . ") as max  FROM " . $this->session->userdata('tabel') . " where code_logger='" . $this->session->userdata('idlogger') . "' and waktu >= '" . $this->session->userdata('pada') . " 00:00' and waktu <= '" . $this->session->userdata('pada') . " 23:59' group by HOUR(waktu),DAY(waktu),MONTH(waktu),YEAR(waktu) order by waktu asc;");
 
+				$np = $this->session->userdata('nama_parameter');
+				$isBendung = ($this->session->userdata('idlogger') == '10349');
+				$bukaanMap = ($isBendung && $this->debitButuhBukaan($np))
+					? debit_floodway_bukaan_historis(
+						"waktu >= '" . $this->session->userdata('pada') . " 00:00' and waktu <= '" . $this->session->userdata('pada') . " 23:59'",
+						"HOUR(waktu),DAY(waktu),MONTH(waktu),YEAR(waktu)",
+						'Y-m-d H:00')
+					: [];
+
 				foreach ($query_data->result() as $datalog) {
 					$nilai_avg = $datalog->$nama_sensor;
 					$nilai_max = $datalog->max;
 					$nilai_min = $datalog->min;
 					
-					if($this->session->userdata('nama_parameter') == 'Q_Floodway_1' and $this->session->userdata('idlogger') == '10349'){
-						$nilai_avg = $this->debitPintu1($nilai_avg);
-						$nilai_max = $this->debitPintu1($nilai_max);
-						$nilai_min = $this->debitPintu1($nilai_min);
-					}elseif($this->session->userdata('nama_parameter') == 'Q_Floodway_2' and $this->session->userdata('idlogger') == '10349'){
-						$nilai_avg = $this->debitPintu2($nilai_avg);
-						$nilai_max = $this->debitPintu2($nilai_max);
-						$nilai_min = $this->debitPintu2($nilai_min);
-					}elseif($this->session->userdata('nama_parameter') == 'Q_Floodway_3' and $this->session->userdata('idlogger') == '10349'){
-						$nilai_avg = $this->debitPintu3($nilai_avg);
-						$nilai_max = $this->debitPintu3($nilai_max);
-						$nilai_min = $this->debitPintu3($nilai_min);
-					}elseif($this->session->userdata('nama_parameter') == 'Q_Floodway_Gabungan' and $this->session->userdata('idlogger') == '10349'){
-						$nilai_avg = $this->debitFloodwayGabungan($nilai_avg);
-						$nilai_max = $this->debitFloodwayGabungan($nilai_max);
-						$nilai_min = $this->debitFloodwayGabungan($nilai_min);
-					}elseif($this->session->userdata('nama_parameter') == 'Debit_Gabungan' and $this->session->userdata('idlogger') == '10349'){
-						$nilai_avg = $this->debitGabungan($nilai_avg);
-						$nilai_max = $this->debitGabungan($nilai_max);
-						$nilai_min = $this->debitGabungan($nilai_min);
-					}elseif($this->session->userdata('nama_parameter') == 'Q_Scouring' and $this->session->userdata('idlogger') == '10349'){
-						$nilai_avg = $this->debitScouring($nilai_avg);
-						$nilai_max = $this->debitScouring($nilai_max);
-						$nilai_min = $this->debitScouring($nilai_min);
+					if ($isBendung) {
+						$key = date('Y-m-d H:00', strtotime($datalog->waktu));
+						$bk  = isset($bukaanMap[$key]) ? $bukaanMap[$key] : [1=>null,2=>null,3=>null];
+						$nilai_avg = $this->debitPeriode($np, $nilai_avg, $bk);
+						$nilai_max = $this->debitPeriode($np, $nilai_max, $bk);
+						$nilai_min = $this->debitPeriode($np, $nilai_min, $bk);
 					}
-
-
 					$data[] = "[ Date.UTC(" . $datalog->tahun . "," . $datalog->bulan . "-1," . $datalog->hari . "," . $datalog->jam . ")," . number_format($nilai_avg, 3) . "]";
 					$range[] = "[ Date.UTC(" . $datalog->tahun . "," . $datalog->bulan . "-1," . $datalog->hari . "," . $datalog->jam . ")," . $nilai_min. "," . $nilai_max . "]";
 					$data_tabel[] = array(
@@ -691,37 +705,27 @@ class Awgc extends CI_Controller
 				$select = 'avg(' . $kolom . ') as ' . $nama_sensor;
 				$satuan = $this->session->userdata('satuan');
 				$query_data = $this->db->query("SELECT waktu, DATE(waktu) as tanggal, DAY(waktu) as hari,MONTH(waktu) as bulan,YEAR(waktu) as tahun," . $select . ",min(" . $kolom . ") as min,max(" . $kolom . ") as max  FROM " . $this->session->userdata('tabel') . " where code_logger='" . $this->session->userdata('idlogger') . "' and waktu >= '" . $this->session->userdata('pada') . "-01 00:00' and waktu <= '" . $this->session->userdata('pada') . "-31 23:59' group by DAY(waktu),MONTH(waktu),YEAR(waktu)  order by waktu asc;");
+
+				$np = $this->session->userdata('nama_parameter');
+				$isBendung = ($this->session->userdata('idlogger') == '10349');
+				$bukaanMap = ($isBendung && $this->debitButuhBukaan($np))
+					? debit_floodway_bukaan_historis(
+						"waktu >= '" . $this->session->userdata('pada') . "-01 00:00' and waktu <= '" . $this->session->userdata('pada') . "-31 23:59'",
+						"DAY(waktu),MONTH(waktu),YEAR(waktu)",
+						'Y-m-d')
+					: [];
 				foreach ($query_data->result() as $datalog) {
 					$nilai_avg = $datalog->$nama_sensor;
 					$nilai_max = $datalog->max;
 					$nilai_min = $datalog->min;
 
-					if($this->session->userdata('nama_parameter') == 'Q_Floodway_1' and $this->session->userdata('idlogger') == '10349'){
-						$nilai_avg = $this->debitPintu1($nilai_avg);
-						$nilai_max = $this->debitPintu1($nilai_max);
-						$nilai_min = $this->debitPintu1($nilai_min);
-					}elseif($this->session->userdata('nama_parameter') == 'Q_Floodway_2' and $this->session->userdata('idlogger') == '10349'){
-						$nilai_avg = $this->debitPintu2($nilai_avg);
-						$nilai_max = $this->debitPintu2($nilai_max);
-						$nilai_min = $this->debitPintu2($nilai_min);
-					}elseif($this->session->userdata('nama_parameter') == 'Q_Floodway_3' and $this->session->userdata('idlogger') == '10349'){
-						$nilai_avg = $this->debitPintu3($nilai_avg);
-						$nilai_max = $this->debitPintu3($nilai_max);
-						$nilai_min = $this->debitPintu3($nilai_min);
-					}elseif($this->session->userdata('nama_parameter') == 'Q_Floodway_Gabungan' and $this->session->userdata('idlogger') == '10349'){
-						$nilai_avg = $this->debitFloodwayGabungan($nilai_avg);
-						$nilai_max = $this->debitFloodwayGabungan($nilai_max);
-						$nilai_min = $this->debitFloodwayGabungan($nilai_min);
-					}elseif($this->session->userdata('nama_parameter') == 'Debit_Gabungan' and $this->session->userdata('idlogger') == '10349'){
-						$nilai_avg = $this->debitGabungan($nilai_avg);
-						$nilai_max = $this->debitGabungan($nilai_max);
-						$nilai_min = $this->debitGabungan($nilai_min);
-					}elseif($this->session->userdata('nama_parameter') == 'Q_Scouring' and $this->session->userdata('idlogger') == '10349'){
-						$nilai_avg = $this->debitScouring($nilai_avg);
-						$nilai_max = $this->debitScouring($nilai_max);
-						$nilai_min = $this->debitScouring($nilai_min);
+					if ($isBendung) {
+						$key = date('Y-m-d', strtotime($datalog->waktu));
+						$bk  = isset($bukaanMap[$key]) ? $bukaanMap[$key] : [1=>null,2=>null,3=>null];
+						$nilai_avg = $this->debitPeriode($np, $nilai_avg, $bk);
+						$nilai_max = $this->debitPeriode($np, $nilai_max, $bk);
+						$nilai_min = $this->debitPeriode($np, $nilai_min, $bk);
 					}
-
 					$data[] = "[ Date.UTC(" . $datalog->tahun . "," . $datalog->bulan . "-1," . $datalog->hari . ")," . number_format($nilai_avg, 3) . "]";
 					$range[] = "[ Date.UTC(" . $datalog->tahun . "," . $datalog->bulan . "-1," . $datalog->hari . ")," . $nilai_min . "," . $nilai_max . "]";
 					$data_tabel[] = array(
@@ -760,35 +764,26 @@ class Awgc extends CI_Controller
 				$satuan = $this->session->userdata('satuan');
 
 				$query_data = $this->db->query("SELECT DATE(waktu) as tanggal,MONTH(waktu) as bulan,YEAR(waktu) as tahun," . $select . ",min(" . $kolom . ") as min,max(" . $kolom . ") as max  FROM " . $this->session->userdata('tabel') . " where code_logger='" . $this->session->userdata('idlogger') . "' and waktu >= '" . $this->session->userdata('pada') . "-01-01 00:00' and waktu <= '" . $this->session->userdata('pada') . "-12-31 23:59' group by MONTH(waktu),YEAR(waktu)  order by waktu asc;");
+
+				$np = $this->session->userdata('nama_parameter');
+				$isBendung = ($this->session->userdata('idlogger') == '10349');
+				$bukaanMap = ($isBendung && $this->debitButuhBukaan($np))
+					? debit_floodway_bukaan_historis(
+						"waktu >= '" . $this->session->userdata('pada') . "-01-01 00:00' and waktu <= '" . $this->session->userdata('pada') . "-12-31 23:59'",
+						"MONTH(waktu),YEAR(waktu)",
+						'Y-m')
+					: [];
 				foreach ($query_data->result() as $datalog) {
 					$nilai_avg = $datalog->$nama_sensor;
 					$nilai_max = $datalog->max;
 					$nilai_min = $datalog->min;
 
-					if($this->session->userdata('nama_parameter') == 'Q_Floodway_1' and $this->session->userdata('idlogger') == '10349'){
-						$nilai_avg = $this->debitPintu1($nilai_avg);
-						$nilai_max = $this->debitPintu1($nilai_max);
-						$nilai_min = $this->debitPintu1($nilai_min);
-					}elseif($this->session->userdata('nama_parameter') == 'Q_Floodway_2' and $this->session->userdata('idlogger') == '10349'){
-						$nilai_avg = $this->debitPintu2($nilai_avg);
-						$nilai_max = $this->debitPintu2($nilai_max);
-						$nilai_min = $this->debitPintu2($nilai_min);
-					}elseif($this->session->userdata('nama_parameter') == 'Q_Floodway_3' and $this->session->userdata('idlogger') == '10349'){
-						$nilai_avg = $this->debitPintu3($nilai_avg);
-						$nilai_max = $this->debitPintu3($nilai_max);
-						$nilai_min = $this->debitPintu3($nilai_min);
-					}elseif($this->session->userdata('nama_parameter') == 'Q_Floodway_Gabungan' and $this->session->userdata('idlogger') == '10349'){
-						$nilai_avg = $this->debitFloodwayGabungan($nilai_avg);
-						$nilai_max = $this->debitFloodwayGabungan($nilai_max);
-						$nilai_min = $this->debitFloodwayGabungan($nilai_min);
-					}elseif($this->session->userdata('nama_parameter') == 'Debit_Gabungan' and $this->session->userdata('idlogger') == '10349'){
-						$nilai_avg = $this->debitGabungan($nilai_avg);
-						$nilai_max = $this->debitGabungan($nilai_max);
-						$nilai_min = $this->debitGabungan($nilai_min);
-					}elseif($this->session->userdata('nama_parameter') == 'Q_Scouring' and $this->session->userdata('idlogger') == '10349'){
-						$nilai_avg = $this->debitScouring($nilai_avg);
-						$nilai_max = $this->debitScouring($nilai_max);
-						$nilai_min = $this->debitScouring($nilai_min);
+					if ($isBendung) {
+						$key = date('Y-m', strtotime($datalog->tanggal));
+						$bk  = isset($bukaanMap[$key]) ? $bukaanMap[$key] : [1=>null,2=>null,3=>null];
+						$nilai_avg = $this->debitPeriode($np, $nilai_avg, $bk);
+						$nilai_max = $this->debitPeriode($np, $nilai_max, $bk);
+						$nilai_min = $this->debitPeriode($np, $nilai_min, $bk);
 					}
 					$data[] = "[ Date.UTC(" . $datalog->tahun . "," . $datalog->bulan . "-1)," . number_format($nilai_avg, 3) . "]";
 					$range[] = "[ Date.UTC(" . $datalog->tahun . "," . $datalog->bulan . "-1)," . $nilai_min . "," . $nilai_max . "]";
@@ -826,35 +821,26 @@ class Awgc extends CI_Controller
 
 				$query_data = $this->db->query("SELECT waktu, HOUR(waktu) as jam,DAY(waktu) as hari,MONTH(waktu) as bulan,YEAR(waktu) as tahun," . $select . ",min(" . $kolom . ") as min,max(" . $kolom . ") as max  FROM " . $this->session->userdata('tabel') . " where code_logger='" . $this->session->userdata('idlogger') . "' and waktu >= '" . $this->session->userdata('dari') . " 00:00' and waktu <= '" . $this->session->userdata('sampai') . " 23:59' group by HOUR(waktu),DAY(waktu),MONTH(waktu),YEAR(waktu) order by waktu asc;");
 
+				$np = $this->session->userdata('nama_parameter');
+				$isBendung = ($this->session->userdata('idlogger') == '10349');
+				$bukaanMap = ($isBendung && $this->debitButuhBukaan($np))
+					? debit_floodway_bukaan_historis(
+						"waktu >= '" . $this->session->userdata('dari') . " 00:00' and waktu <= '" . $this->session->userdata('sampai') . " 23:59'",
+						"HOUR(waktu),DAY(waktu),MONTH(waktu),YEAR(waktu)",
+						'Y-m-d H:00')
+					: [];
+
 				foreach ($query_data->result() as $datalog) {
 					$nilai_avg = $datalog->$nama_sensor;
 					$nilai_max = $datalog->max;
 					$nilai_min = $datalog->min;
 
-					if($this->session->userdata('nama_parameter') == 'Q_Floodway_1' and $this->session->userdata('idlogger') == '10349'){
-						$nilai_avg = $this->debitPintu1($nilai_avg);
-						$nilai_max = $this->debitPintu1($nilai_max);
-						$nilai_min = $this->debitPintu1($nilai_min);
-					}elseif($this->session->userdata('nama_parameter') == 'Q_Floodway_2' and $this->session->userdata('idlogger') == '10349'){
-						$nilai_avg = $this->debitPintu2($nilai_avg);
-						$nilai_max = $this->debitPintu2($nilai_max);
-						$nilai_min = $this->debitPintu2($nilai_min);
-					}elseif($this->session->userdata('nama_parameter') == 'Q_Floodway_3' and $this->session->userdata('idlogger') == '10349'){
-						$nilai_avg = $this->debitPintu3($nilai_avg);
-						$nilai_max = $this->debitPintu3($nilai_max);
-						$nilai_min = $this->debitPintu3($nilai_min);
-					}elseif($this->session->userdata('nama_parameter') == 'Q_Floodway_Gabungan' and $this->session->userdata('idlogger') == '10349'){
-						$nilai_avg = $this->debitFloodwayGabungan($nilai_avg);
-						$nilai_max = $this->debitFloodwayGabungan($nilai_max);
-						$nilai_min = $this->debitFloodwayGabungan($nilai_min);
-					}elseif($this->session->userdata('nama_parameter') == 'Debit_Gabungan' and $this->session->userdata('idlogger') == '10349'){
-						$nilai_avg = $this->debitGabungan($nilai_avg);
-						$nilai_max = $this->debitGabungan($nilai_max);
-						$nilai_min = $this->debitGabungan($nilai_min);
-					}elseif($this->session->userdata('nama_parameter') == 'Q_Scouring' and $this->session->userdata('idlogger') == '10349'){
-						$nilai_avg = $this->debitScouring($nilai_avg);
-						$nilai_max = $this->debitScouring($nilai_max);
-						$nilai_min = $this->debitScouring($nilai_min);
+					if ($isBendung) {
+						$key = date('Y-m-d H:00', strtotime($datalog->waktu));
+						$bk  = isset($bukaanMap[$key]) ? $bukaanMap[$key] : [1=>null,2=>null,3=>null];
+						$nilai_avg = $this->debitPeriode($np, $nilai_avg, $bk);
+						$nilai_max = $this->debitPeriode($np, $nilai_max, $bk);
+						$nilai_min = $this->debitPeriode($np, $nilai_min, $bk);
 					}
 					$data[] = "[ Date.UTC(" . $datalog->tahun . "," . $datalog->bulan . "-1," . $datalog->hari . "," . $datalog->jam . ")," . number_format($nilai_avg, 3) . "]";
 					$range[] = "[ Date.UTC(" . $datalog->tahun . "," . $datalog->bulan . "-1," . $datalog->hari . "," . $datalog->jam . ")," . $nilai_min . "," . $nilai_max . "]";
