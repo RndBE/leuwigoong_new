@@ -1,4 +1,4 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 	<head>
 		<meta charset="utf-8" />
@@ -7,6 +7,13 @@
 		<title>Peta 3D DI Leuwigoong</title>
 		<link rel="icon" href="<?php echo base_url() ?>image/logopu 4.png">
 		<link href="https://stesy.beacontelemetry.com/assets/code/tabler.min.css" rel="stylesheet"/>
+		<link href="https://stesy.beacontelemetry.com/assets/code/tabler-flags.min.css" rel="stylesheet"/>
+		<link href="https://stesy.beacontelemetry.com/assets/code/tabler-payments.min.css" rel="stylesheet"/>
+		<link href="https://stesy.beacontelemetry.com/assets/code/tabler-vendors.min.css" rel="stylesheet"/>
+		<link href="https://stesy.beacontelemetry.com/assets/code/demo.min.css" rel="stylesheet"/>
+		<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;800&display=swap" rel="stylesheet"/>
+		<script src="https://stesy.beacontelemetry.com/assets/code/tabler.min.js" defer></script>
+		<script src="https://stesy.beacontelemetry.com/assets/code/demo.min.js" defer></script>
 		<script src="https://code.jquery.com/jquery-3.6.0.js"></script>
 		<style>
 			:root {
@@ -28,7 +35,6 @@
 				margin: 0;
 				color: var(--text);
 				background: var(--map-bg);
-				font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 				overflow: hidden;
 			}
 
@@ -66,6 +72,7 @@
 				border: 2px solid #FFD61580;
 				border-radius: 5px;
 				box-shadow: none;
+				font-family: Roboto, Arial, sans-serif;
 			}
 
 			.peta3d-brand {
@@ -134,7 +141,14 @@
 				font-size: 12px;
 				font-weight: 700;
 				line-height: 1;
-				padding-top: 2px;
+				padding-top: 2px !important;
+			}
+
+			.weather-temp h1 {
+				margin: 0 !important;
+				font-size: inherit;
+				font-weight: inherit;
+				line-height: inherit;
 			}
 
 			.weather-desc {
@@ -145,7 +159,15 @@
 				white-space: nowrap;
 			}
 
-			.nav-action {
+			.weather-desc h5 {
+				margin: 0 !important;
+				font-size: inherit;
+				font-weight: inherit;
+				line-height: inherit;
+			}
+
+			.nav-action,
+			.nav-action-location {
 				position: relative;
 				display: inline-flex;
 				align-items: center;
@@ -161,12 +183,29 @@
 				white-space: nowrap;
 			}
 
-			.nav-action:hover {
+			#peta3dPage .nav-action,
+			#peta3dPage .nav-action-location {
+				font-size: 16px;
+				font-weight: 700;
+			}
+
+			#peta3dPage .nav-action > span:not(.nav-link-icon),
+			#peta3dPage .nav-action > h3,
+			#peta3dPage .nav-action-location > span:not(.nav-link-icon),
+			#peta3dPage .nav-action-location > h3 {
+				margin: 0 !important;
+				font: inherit;
+				line-height: inherit;
+			}
+
+			.nav-action:hover,
+			.nav-action-location:hover {
 				color: #fff;
 				text-decoration: none;
 			}
 
-			.nav-action.active::after {
+			.nav-action.active::after,
+			.nav-action-location.active::after {
 				position: absolute;
 				left: 50%;
 				bottom: 1px;
@@ -177,10 +216,86 @@
 				transform: translateX(-50%);
 			}
 
-			.nav-action svg {
+			@media (min-width: 992px) {
+				.nav-action.active::after,
+				.nav-action-location.active::after {
+					left: calc(50% + 15px);
+					width: calc(100% - 30px);
+				}
+			}
+
+			.nav-action svg,
+			.nav-action-location svg {
 				width: 22px;
 				height: 22px;
 				flex: 0 0 auto;
+				margin-right: 0 !important;
+			}
+
+			.map-nav-item {
+				display: flex;
+				flex-direction: column;
+				align-items: center;
+			}
+
+			.download-nav-3d {
+				margin-right: 16px;
+			}
+
+			.download-nav-3d .nav-action,
+			.download-nav-location .nav-action-location {
+				margin-right: 0;
+			}
+
+			@media (min-width: 769px) {
+				.peta3d-toolbar .weather-chip-location {
+					min-height: 52px;
+					margin-right: 16px;
+					padding: 7px 8px;
+				}
+
+				.peta3d-toolbar .weather-chip-location img {
+					height: 35px;
+				}
+
+				.peta3d-toolbar .weather-temp-location {
+					margin-left: 8px;
+					font-size: 26px;
+				}
+
+				.peta3d-toolbar .weather-temp-location span {
+					font-size: 12px;
+				}
+
+				.peta3d-toolbar .weather-desc-location {
+					margin-left: 14px;
+					font-size: 12px;
+				}
+
+				#peta3dPage .peta3d-toolbar .nav-action-location {
+					gap: 8px;
+					margin-right: 16px;
+					font-size: 16px;
+				}
+
+				#peta3dPage .peta3d-toolbar .nav-action-location > span:not(.nav-link-icon),
+				#peta3dPage .peta3d-toolbar .nav-action-location > h3 {
+					position: relative;
+					top: 1px;
+				}
+
+				#peta3dPage .peta3d-toolbar .nav-action-location svg {
+					width: 22px;
+					height: 22px;
+				}
+
+				.peta3d-toolbar .download-nav-location {
+					margin-right: 16px;
+				}
+
+				#peta3dPage .peta3d-toolbar .download-nav-location .nav-action-location {
+					margin-right: 0 !important;
+				}
 			}
 
 			.map-tools {
@@ -1079,6 +1194,10 @@
 					flex: 0 0 auto;
 				}
 
+				.map-nav-item {
+					display: contents;
+				}
+
 				.weather-chip {
 					display: flex;
 					min-height: 28px;
@@ -1106,22 +1225,49 @@
 					line-height: 1.08;
 				}
 
-				.nav-action {
+				.nav-action,
+				.nav-action-location {
 					width: 34px;
 					height: 34px;
 					justify-content: center;
-					margin-right: 5px;
-					padding: 0;
+					margin-right: 5px !important;
+					padding: 0 !important;
+					font-size: 0 !important;
+					gap: 0;
 				}
 
-				.nav-action svg {
+				.nav-action .nav-link-icon,
+				.nav-action-location .nav-link-icon {
+					display: flex !important;
+					align-items: center;
+					justify-content: center;
 					width: 21px;
 					height: 21px;
+					margin: 0 !important;
+					padding: 0 !important;
 				}
 
-				.nav-action.active::after {
+				.nav-action svg,
+				.nav-action-location svg {
+					width: 21px;
+					height: 21px;
+					margin: 0 !important;
+				}
+
+				.nav-action.active::after,
+				.nav-action-location.active::after {
 					bottom: -5px;
 					width: 24px;
+				}
+
+				.download-nav-3d,
+				.download-nav-location {
+					margin-right: 5px;
+				}
+
+				.download-nav-3d .dropdown-toggle::after,
+				.download-nav-location .dropdown-toggle::after {
+					display: none;
 				}
 
 				.map-shell {
@@ -1204,38 +1350,55 @@
 	<body>
 		<div class="peta3d-page" id="peta3dPage">
 			<header class="peta3d-toolbar">
-				<div class="peta3d-brand">
+				<div class="peta3d-brand peta-map-brand">
 					<img class="brand-full" src="<?php echo base_url() ?>image/peta_lokasi.svg" alt="DI Leuwigoong">
 					<img class="brand-mark" src="<?php echo base_url() ?>image/logopu 4.png" alt="DI Leuwigoong">
 					<h1 class="peta3d-title">Peta 3D DI Leuwigoong</h1>
 				</div>
-				<div class="peta3d-actions">
-					<div class="weather-chip">
+				<div class="peta3d-actions peta-map-actions">
+					<div class="weather-chip weather-chip-location">
 						<img src="<?php echo isset($cuaca->image) ? $cuaca->image : base_url('image/water.png') ?>" alt="Cuaca">
-						<div class="weather-temp"><?php echo isset($cuaca->t) ? $cuaca->t : '-' ?><span>&deg;C</span></div>
-						<div class="weather-desc">
-							<div><?php echo isset($cuaca->weather_desc) ? $cuaca->weather_desc : 'Cuaca' ?></div>
-							<div>Angin : <?php echo isset($cuaca->ws) ? $cuaca->ws : '-' ?> km/h</div>
+						<div class="weather-temp weather-temp-location"><h1><?php echo isset($cuaca->t) ? $cuaca->t : '-' ?></h1><span>&deg;C</span></div>
+						<div class="weather-desc weather-desc-location">
+							<h5><?php echo isset($cuaca->weather_desc) ? $cuaca->weather_desc : 'Cuaca' ?></h5>
+							<h5>Angin : <?php echo isset($cuaca->ws) ? $cuaca->ws : '-' ?> km/h</h5>
 						</div>
 					</div>
-					<a class="nav-action" href="<?php echo base_url('beranda') ?>">
-						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><path fill="currentColor" d="M6.906.664a1.749 1.749 0 0 1 2.187 0l5.25 4.2c.415.332.657.835.657 1.367v7.019A1.75 1.75 0 0 1 13.25 15h-3.5a.75.75 0 0 1-.75-.75V9H7v5.25a.75.75 0 0 1-.75.75h-3.5A1.75 1.75 0 0 1 1 13.25V6.23c0-.531.242-1.034.657-1.366l5.25-4.2Zm1.25 1.171a.25.25 0 0 0-.312 0l-5.25 4.2a.25.25 0 0 0-.094.196v7.019c0 .138.112.25.25.25H5.5V8.25a.75.75 0 0 1 .75-.75h3.5a.75.75 0 0 1 .75.75v5.25h2.75a.25.25 0 0 0 .25-.25V6.23a.25.25 0 0 0-.094-.195Z"/></svg>
-						<span class="d-none d-lg-inline-block">Dashboard</span>
-					</a>
-					<a class="nav-action" href="<?php echo base_url('analisa') ?>">
-						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7l6 -3l6 3l6 -3v13l-6 3l-6 -3l-6 3v-13" /><path d="M9 4v13" /><path d="M15 7v13" /></svg>
-						<span class="d-none d-lg-inline-block">Peta Lokasi</span>
-					</a>
-					<a class="nav-action active" href="<?php echo base_url('peta3d') ?>">
-						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 2l9 5l-9 5l-9 -5l9 -5z"/><path d="m3 12l9 5l9 -5"/><path d="m3 17l9 5l9 -5"/></svg>
-						<span class="d-none d-lg-inline-block">Peta 3D</span>
-					</a>
-					<a class="nav-action" href="<?php echo base_url() ?>" target="_blank">
-						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 26 26"><g fill="none"><path d="M24 0v24H0V0h24Z"/><path fill="currentColor" d="M20 14.5a1.5 1.5 0 0 1 1.5 1.5v4a2.5 2.5 0 0 1-2.5 2.5H5A2.5 2.5 0 0 1 2.5 20v-4a1.5 1.5 0 0 1 3 0v3.5h13V16a1.5 1.5 0 0 1 1.5-1.5Zm-8-13A1.5 1.5 0 0 1 13.5 3v9.036l1.682-1.682a1.5 1.5 0 0 1 2.121 2.12l-4.066 4.067a1.75 1.75 0 0 1-2.474 0l-4.066-4.066a1.5 1.5 0 0 1 2.121-2.121l1.682 1.682V3A1.5 1.5 0 0 1 12 1.5Z"/></g></svg>
-						<span class="d-none d-lg-inline-block">Unduh</span>
-					</a>
-					<a class="nav-action" href="<?php echo base_url('login/logout') ?>">
-						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><g fill="none"><path d="M24 0v24H0V0h24Z"/><path fill="currentColor" d="M12 2.5a1.5 1.5 0 0 1 0 3H7a.5.5 0 0 0-.5.5v12a.5.5 0 0 0 .5.5h4.5a1.5 1.5 0 0 1 0 3H7A3.5 3.5 0 0 1 3.5 18V6A3.5 3.5 0 0 1 7 2.5Zm6.06 5.61l2.829 2.83a1.5 1.5 0 0 1 0 2.12l-2.828 2.83a1.5 1.5 0 1 1-2.122-2.122l.268-.268H12a1.5 1.5 0 0 1 0-3h4.207l-.268-.268a1.5 1.5 0 1 1 2.122-2.121Z"/></g></svg>
+					<div class="map-nav-item d-flex flex-column align-items-center">
+						<a class="nav-action nav-action-location" href="<?php echo base_url('beranda') ?>">
+							<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 16 16" class="me-2"><path fill="currentColor" d="M6.906.664a1.749 1.749 0 0 1 2.187 0l5.25 4.2c.415.332.657.835.657 1.367v7.019A1.75 1.75 0 0 1 13.25 15h-3.5a.75.75 0 0 1-.75-.75V9H7v5.25a.75.75 0 0 1-.75.75h-3.5A1.75 1.75 0 0 1 1 13.25V6.23c0-.531.242-1.034.657-1.366l5.25-4.2Zm1.25 1.171a.25.25 0 0 0-.312 0l-5.25 4.2a.25.25 0 0 0-.094.196v7.019c0 .138.112.25.25.25H5.5V8.25a.75.75 0 0 1 .75-.75h3.5a.75.75 0 0 1 .75.75v5.25h2.75a.25.25 0 0 0 .25-.25V6.23a.25.25 0 0 0-.094-.195Z"/></svg>
+							<span class="d-none d-lg-inline-block">Dashboard</span>
+						</a>
+					</div>
+					<div class="map-nav-item d-flex flex-column align-items-center">
+						<a class="nav-action nav-action-location" href="<?php echo base_url('analisa') ?>">
+							<span class="nav-link-icon d-lg-inline-block text-white">
+								<svg  xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="2"  stroke-linecap="round"  stroke-linejoin="round"  class="icon icon-tabler icons-tabler-outline icon-tabler-map"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M3 7l6 -3l6 3l6 -3v13l-6 3l-6 -3l-6 3v-13" /><path d="M9 4v13" /><path d="M15 7v13" /></svg>
+							</span>
+							<span class="d-none d-lg-inline-block">Peta Lokasi</span>
+						</a>
+					</div>
+					<div class="map-nav-item d-flex flex-column align-items-center">
+						<button class="nav-action nav-action-location active" type="button">
+							<span class="nav-link-icon d-lg-inline-block text-white">
+								<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" class="me-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 2l9 5l-9 5l-9 -5l9 -5z"/><path d="m3 12l9 5l9 -5"/><path d="m3 17l9 5l9 -5"/></svg>
+							</span>
+							<span class="d-none d-lg-inline-block">Peta 3D</span>
+						</button>
+					</div>
+					<div class="dropdown px-0 download-nav-3d download-nav-location">
+						<button type="button" class="nav-action nav-action-location dropdown-toggle" data-bs-toggle="dropdown">
+							<svg xmlns="http://www.w3.org/2000/svg" width="22" class="me-2" height="22" viewBox="0 0 26 26"><g fill="none"><path d="M24 0v24H0V0h24Z"/><path fill="currentColor" d="M20 14.5a1.5 1.5 0 0 1 1.5 1.5v4a2.5 2.5 0 0 1-2.5 2.5H5A2.5 2.5 0 0 1 2.5 20v-4a1.5 1.5 0 0 1 3 0v3.5h13V16a1.5 1.5 0 0 1 1.5-1.5Zm-8-13A1.5 1.5 0 0 1 13.5 3v9.036l1.682-1.682a1.5 1.5 0 0 1 2.121 2.12l-4.066 4.067a1.75 1.75 0 0 1-2.474 0l-4.066-4.066a1.5 1.5 0 0 1 2.121-2.121l1.682 1.682V3A1.5 1.5 0 0 1 12 1.5Z"/></g></svg>
+							<h3 class="mb-0 fw-bold d-none d-lg-inline-block">Unduh</h3>
+						</button>
+						<div class="dropdown-menu fw-bold border-white">
+							<a class="dropdown-item" href="<?php echo base_url() ?>" target="_blank">
+								Android App
+							</a>
+						</div>
+					</div>
+					<a class="nav-action nav-action-location" href="<?php echo base_url('login/logout') ?>">
+						<svg xmlns="http://www.w3.org/2000/svg" class="me-2" width="22" height="22" viewBox="0 0 24 24"><g fill="none"><path d="M24 0v24H0V0h24Z"/><path fill="currentColor" d="M12 2.5a1.5 1.5 0 0 1 0 3H7a.5.5 0 0 0-.5.5v12a.5.5 0 0 0 .5.5h4.5a1.5 1.5 0 0 1 0 3H7A3.5 3.5 0 0 1 3.5 18V6A3.5 3.5 0 0 1 7 2.5Zm6.06 5.61l2.829 2.83a1.5 1.5 0 0 1 0 2.12l-2.828 2.83a1.5 1.5 0 1 1-2.122-2.122l.268-.268H12a1.5 1.5 0 0 1 0-3h4.207l-.268-.268a1.5 1.5 0 1 1 2.122-2.121Z"/></g></svg>
 						<span class="d-none d-lg-inline-block">Keluar</span>
 					</a>
 				</div>
