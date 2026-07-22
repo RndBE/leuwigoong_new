@@ -37,6 +37,18 @@
 
 				</li>
 
+				<li class="nav-item <?php if ($this->uri->segment(1) == 'peta3d') {
+	echo 'active';
+} ?>">
+					<?php echo anchor('peta3d', '<span class="nav-link-icon d-md-none d-lg-inline-block text-white">
+                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3l8 4.5l-8 4.5l-8 -4.5l8 -4.5" /><path d="m20 12l-8 4.5l-8 -4.5" /><path d="m20 16.5l-8 4.5l-8 -4.5" /></svg>
+                    </span>
+                    <span class="nav-link-title text-white fw-semibold">
+                      Peta 3D
+                    </span>', 'class="nav-link"') ?>
+
+				</li>
+
 				<li class="nav-item dropdown">
 					<a class="nav-link dropdown-toggle text-white" href="#navbar-help" data-bs-toggle="dropdown" data-bs-auto-close="outside" role="button" aria-expanded="false">
 						<span class="nav-link-icon d-md-none d-lg-inline-block text-white">
