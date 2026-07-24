@@ -358,16 +358,27 @@
 				height: 18px;
 			}
 
+			.marker-tool-actions {
+				display: flex;
+				align-items: center;
+				gap: 8px;
+			}
+
 			.label-toggle-button {
-				width: 42px;
+				min-width: 86px;
 				height: 42px;
-				display: grid;
-				place-items: center;
+				display: inline-flex;
+				align-items: center;
+				justify-content: center;
+				gap: 7px;
 				color: #fff;
 				background: rgba(48, 52, 129, 0.86);
 				border: 2px solid rgba(255, 214, 21, 0.65);
 				border-radius: 5px;
-				padding: 0;
+				padding: 0 12px;
+				font-size: 13px;
+				font-weight: 800;
+				line-height: 1;
 			}
 
 			.label-toggle-button.active {
@@ -379,6 +390,7 @@
 			.label-toggle-button svg {
 				width: 21px;
 				height: 21px;
+				flex: 0 0 auto;
 			}
 
 			.map-search {
@@ -1387,8 +1399,14 @@
 				}
 
 				.label-toggle-button {
-					width: 38px;
+					min-width: 78px;
 					height: 38px;
+					padding: 0 10px;
+					font-size: 12px;
+				}
+
+				.marker-tool-actions {
+					gap: 6px;
 				}
 
 				.edit-banner {
@@ -1482,10 +1500,13 @@
 						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11a8.1 8.1 0 0 0 -15.5 -2m-.5 -4v4h4"/><path d="M4 13a8.1 8.1 0 0 0 15.5 2m.5 4v-4h-4"/></svg>
 					</button>
 				</div>
-				<button class="label-toggle-button" type="button" id="toggleMarkerLabels" aria-label="Sembunyikan label titik" title="Sembunyikan label titik" aria-pressed="false">
-					<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.58 10.58a2 2 0 0 0 2.83 2.83"/><path d="M16.68 16.68A10.82 10.82 0 0 1 12 18c-5 0 -9 -6 -9 -6a18.45 18.45 0 0 1 5.32 -4.68"/><path d="M10.88 5.08A10.94 10.94 0 0 1 12 5c5 0 9 6 9 6a18.5 18.5 0 0 1 -2.5 3.17"/><path d="M3 3l18 18"/></svg>
-				</button>
-				<button class="edit-button" type="button" id="toggleEditMarkers">Atur Titik</button>
+				<div class="marker-tool-actions">
+					<button class="label-toggle-button" type="button" id="toggleMarkerLabels" aria-label="Sembunyikan label titik" title="Sembunyikan label titik" aria-pressed="false">
+						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.58 10.58a2 2 0 0 0 2.83 2.83"/><path d="M16.68 16.68A10.82 10.82 0 0 1 12 18c-5 0 -9 -6 -9 -6a18.45 18.45 0 0 1 5.32 -4.68"/><path d="M10.88 5.08A10.94 10.94 0 0 1 12 5c5 0 9 6 9 6a18.5 18.5 0 0 1 -2.5 3.17"/><path d="M3 3l18 18"/></svg>
+						<span>Label</span>
+					</button>
+					<button class="edit-button" type="button" id="toggleEditMarkers">Atur Titik</button>
+				</div>
 			</div>
 			<div class="position-toast" id="positionToast">Posisi marker tersimpan</div>
 		</div>
@@ -1811,7 +1832,7 @@
 					.attr('aria-pressed', String(!labelsVisible))
 					.attr('aria-label', title)
 					.attr('title', title)
-					.html(markerLabelToggleIcon(labelsVisible));
+					.html(markerLabelToggleIcon(labelsVisible) + '<span>Label</span>');
 				renderMarkers();
 				showToast(labelsVisible ? 'Label titik ditampilkan' : 'Label titik disembunyikan');
 			}
