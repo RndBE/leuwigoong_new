@@ -358,6 +358,29 @@
 				height: 18px;
 			}
 
+			.label-toggle-button {
+				width: 42px;
+				height: 42px;
+				display: grid;
+				place-items: center;
+				color: #fff;
+				background: rgba(48, 52, 129, 0.86);
+				border: 2px solid rgba(255, 214, 21, 0.65);
+				border-radius: 5px;
+				padding: 0;
+			}
+
+			.label-toggle-button.active {
+				color: #1f2937;
+				background: var(--brand-yellow);
+				border-color: rgba(255, 214, 21, 0.85);
+			}
+
+			.label-toggle-button svg {
+				width: 21px;
+				height: 21px;
+			}
+
 			.map-search {
 				position: absolute;
 				z-index: 34;
@@ -535,6 +558,17 @@
 				--callout-scale: 1;
 				--marker-scale: 1;
 				--marker-hover-scale: 1.08;
+				--label-zoom-scale: 1;
+				--label-min-width: 125px;
+				--label-max-width: 180px;
+				--label-compact-min-width: 95px;
+				--label-compact-max-width: 140px;
+				--label-padding-y: 6px;
+				--label-padding-x: 8px;
+				--label-compact-padding-y: 5px;
+				--label-compact-padding-x: 7px;
+				--label-title-size: 12px;
+				--label-status-size: 10px;
 				--map-pan-x: 0px;
 				--map-pan-y: 0px;
 				--map-frame-width: 100%;
@@ -643,10 +677,11 @@
 				position: absolute;
 				left: calc(100% + 5px);
 				top: 50%;
-				transform: translateY(-50%);
-				max-width: clamp(145px, 11vw, 180px);
-				min-width: clamp(125px, 9vw, 155px);
-				padding: 6px 8px 6px;
+				transform: translateY(-50%) scale(var(--label-zoom-scale));
+				transform-origin: left center;
+				max-width: var(--label-max-width);
+				min-width: var(--label-min-width);
+				padding: var(--label-padding-y) var(--label-padding-x);
 				border-radius: 6px;
 				background: rgba(255, 255, 255, 0.78);
 				box-shadow: none;
@@ -675,47 +710,52 @@
 			.peta3d-page.has-callout .marker.active .marker-label {
 				opacity: 0;
 				pointer-events: none;
-				transform: translateY(-50%) translateX(0);
+				transform: translateY(-50%) translateX(0) scale(var(--label-zoom-scale));
 			}
 
 			.peta3d-page.has-callout .marker.active.label-left .marker-label {
-				transform: translateY(-50%) translateX(0);
+				transform: translateY(-50%) translateX(0) scale(var(--label-zoom-scale));
 			}
 
 			.peta3d-page.has-callout .marker.active.label-top .marker-label,
 			.peta3d-page.has-callout .marker.active.label-bottom .marker-label {
-				transform: translateX(-50%) translateY(0);
+				transform: translateX(-50%) translateY(0) scale(var(--label-zoom-scale));
 			}
 
 			.peta3d-page.labels-compact .marker-label {
-				min-width: clamp(92px, 7vw, 124px);
-				max-width: clamp(110px, 8.5vw, 140px);
-				padding: 5px 7px;
+				min-width: var(--label-compact-min-width);
+				max-width: var(--label-compact-max-width);
+				padding: var(--label-compact-padding-y) var(--label-compact-padding-x);
+			}
+
+			.peta3d-page.labels-hidden .marker-label {
+				opacity: 0 !important;
+				pointer-events: none;
 			}
 
 			.peta3d-page.labels-compact .marker:not(.active):not(:hover):not(:focus-visible) .marker-label {
 				opacity: 0;
 				pointer-events: none;
-				transform: translateY(-50%) translateX(-4px);
+				transform: translateY(-50%) translateX(-4px) scale(var(--label-zoom-scale));
 			}
 
 			.peta3d-page.labels-compact .marker.label-left:not(.active):not(:hover):not(:focus-visible) .marker-label {
-				transform: translateY(-50%) translateX(4px);
+				transform: translateY(-50%) translateX(4px) scale(var(--label-zoom-scale));
 			}
 
 			.peta3d-page.labels-compact .marker.label-top:not(.active):not(:hover):not(:focus-visible) .marker-label,
 			.peta3d-page.labels-compact .marker.label-bottom:not(.active):not(:hover):not(:focus-visible) .marker-label {
-				transform: translateX(-50%) translateY(4px);
+				transform: translateX(-50%) translateY(4px) scale(var(--label-zoom-scale));
 			}
 
 			.peta3d-page.labels-compact .marker.label-top-right:not(.active):not(:hover):not(:focus-visible) .marker-label,
 			.peta3d-page.labels-compact .marker.label-bottom-right:not(.active):not(:hover):not(:focus-visible) .marker-label {
-				transform: translateX(-4px);
+				transform: translateX(-4px) scale(var(--label-zoom-scale));
 			}
 
 			.peta3d-page.labels-compact .marker.label-top-left:not(.active):not(:hover):not(:focus-visible) .marker-label,
 			.peta3d-page.labels-compact .marker.label-bottom-left:not(.active):not(:hover):not(:focus-visible) .marker-label {
-				transform: translateX(4px);
+				transform: translateX(4px) scale(var(--label-zoom-scale));
 			}
 
 			.peta3d-page.labels-compact .marker-label span {
@@ -731,32 +771,37 @@
 			.marker.label-left .marker-label {
 				left: auto;
 				right: calc(100% + 5px);
+				transform-origin: right center;
 			}
 
 			.marker.label-top .marker-label {
 				left: 50%;
 				top: auto;
 				bottom: calc(100% + 5px);
-				transform: translateX(-50%);
+				transform: translateX(-50%) scale(var(--label-zoom-scale));
+				transform-origin: center bottom;
 			}
 
 			.marker.label-bottom .marker-label {
 				left: 50%;
 				top: calc(100% + 5px);
-				transform: translateX(-50%);
+				transform: translateX(-50%) scale(var(--label-zoom-scale));
+				transform-origin: center top;
 			}
 
 			.marker.label-top-right .marker-label {
 				left: calc(100% + 5px);
 				top: auto;
 				bottom: calc(60% + 5px);
-				transform: none;
+				transform: scale(var(--label-zoom-scale));
+				transform-origin: left bottom;
 			}
 
 			.marker.label-bottom-right .marker-label {
 				left: calc(100% + 5px);
 				top: calc(60% + 5px);
-				transform: none;
+				transform: scale(var(--label-zoom-scale));
+				transform-origin: left top;
 			}
 
 			.marker.label-top-left .marker-label {
@@ -764,14 +809,16 @@
 				right: calc(100% + 5px);
 				top: auto;
 				bottom: calc(60% + 5px);
-				transform: none;
+				transform: scale(var(--label-zoom-scale));
+				transform-origin: right bottom;
 			}
 
 			.marker.label-bottom-left .marker-label {
 				left: auto;
 				right: calc(100% + 5px);
 				top: calc(60% + 5px);
-				transform: none;
+				transform: scale(var(--label-zoom-scale));
+				transform-origin: right top;
 			}
 
 			.marker-label strong {
@@ -780,7 +827,7 @@
 				text-overflow: ellipsis;
 				white-space: nowrap;
 				color: #2e322c;
-				font-size: clamp(11px, 0.82vw, 14px);
+				font-size: var(--label-title-size);
 				font-weight: 600;
 			}
 
@@ -790,7 +837,7 @@
 				gap: 5px;
 				margin-top: 2px;
 				color: #263226;
-				font-size: clamp(9px, 0.68vw, 11px);
+				font-size: var(--label-status-size);
 				font-weight: 400;
 				white-space: nowrap;
 			}
@@ -1339,6 +1386,11 @@
 					font-size: 12px;
 				}
 
+				.label-toggle-button {
+					width: 38px;
+					height: 38px;
+				}
+
 				.edit-banner {
 					top: 122px;
 					max-width: calc(100vw - 20px);
@@ -1430,6 +1482,9 @@
 						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11a8.1 8.1 0 0 0 -15.5 -2m-.5 -4v4h4"/><path d="M4 13a8.1 8.1 0 0 0 15.5 2m.5 4v-4h-4"/></svg>
 					</button>
 				</div>
+				<button class="label-toggle-button" type="button" id="toggleMarkerLabels" aria-label="Sembunyikan label titik" title="Sembunyikan label titik" aria-pressed="false">
+					<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.58 10.58a2 2 0 0 0 2.83 2.83"/><path d="M16.68 16.68A10.82 10.82 0 0 1 12 18c-5 0 -9 -6 -9 -6a18.45 18.45 0 0 1 5.32 -4.68"/><path d="M10.88 5.08A10.94 10.94 0 0 1 12 5c5 0 9 6 9 6a18.5 18.5 0 0 1 -2.5 3.17"/><path d="M3 3l18 18"/></svg>
+				</button>
 				<button class="edit-button" type="button" id="toggleEditMarkers">Atur Titik</button>
 			</div>
 			<div class="position-toast" id="positionToast">Posisi marker tersimpan</div>
@@ -1443,6 +1498,7 @@
 			let markers = Array.isArray(initialMarkers) ? initialMarkers : [];
 			let selectedId = null;
 			let editMode = false;
+			let labelsVisible = true;
 			let draggingId = null;
 			let toastTimer = null;
 			let zoomLevel = 1;
@@ -1509,7 +1565,23 @@
 			}
 
 			function updateZoomState() {
-				$('#peta3dPage').toggleClass('labels-compact', zoomLevel < 1.25);
+				const mapCanvas = document.getElementById('mapCanvas');
+				const progress = Math.max(0, Math.min(1, (zoomLevel - minZoom) / (maxZoom - minZoom)));
+				const labelScale = 1 / Math.sqrt(zoomLevel);
+				mapCanvas.style.setProperty('--label-zoom-scale', Number(labelScale.toFixed(3)));
+				mapCanvas.style.setProperty('--label-min-width', (120 + progress * 26).toFixed(1) + 'px');
+				mapCanvas.style.setProperty('--label-max-width', (145 + progress * 35).toFixed(1) + 'px');
+				mapCanvas.style.setProperty('--label-compact-min-width', (94 + progress * 20).toFixed(1) + 'px');
+				mapCanvas.style.setProperty('--label-compact-max-width', (112 + progress * 26).toFixed(1) + 'px');
+				mapCanvas.style.setProperty('--label-padding-y', (5 + progress * 1.5).toFixed(1) + 'px');
+				mapCanvas.style.setProperty('--label-padding-x', (7 + progress * 2).toFixed(1) + 'px');
+				mapCanvas.style.setProperty('--label-compact-padding-y', (4.4 + progress).toFixed(1) + 'px');
+				mapCanvas.style.setProperty('--label-compact-padding-x', (6.2 + progress * 1.2).toFixed(1) + 'px');
+				mapCanvas.style.setProperty('--label-title-size', (11 + progress * 2).toFixed(1) + 'px');
+				mapCanvas.style.setProperty('--label-status-size', (9 + progress * 1.5).toFixed(1) + 'px');
+				$('#peta3dPage')
+					.toggleClass('labels-compact', zoomLevel < 1.25)
+					.toggleClass('labels-hidden', !labelsVisible);
 			}
 
 			function isMobileViewport() {
@@ -1723,6 +1795,27 @@
 				showToast(editMode ? 'Mode atur titik aktif. Drag marker untuk menyimpan posisi.' : 'Mode atur titik selesai.');
 			}
 
+			function markerLabelToggleIcon(visible) {
+				if (visible) {
+					return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.58 10.58a2 2 0 0 0 2.83 2.83"/><path d="M16.68 16.68A10.82 10.82 0 0 1 12 18c-5 0 -9 -6 -9 -6a18.45 18.45 0 0 1 5.32 -4.68"/><path d="M10.88 5.08A10.94 10.94 0 0 1 12 5c5 0 9 6 9 6a18.5 18.5 0 0 1 -2.5 3.17"/><path d="M3 3l18 18"/></svg>';
+				}
+				return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.06 12.35a1 1 0 0 1 0 -.7C3.5 7.35 7.5 5 12 5s8.5 2.35 9.94 6.65a1 1 0 0 1 0 .7C20.5 16.65 16.5 19 12 19s-8.5 -2.35 -9.94 -6.65Z"/><path d="M12 15a3 3 0 1 0 0 -6a3 3 0 0 0 0 6Z"/></svg>';
+			}
+
+			function setLabelsVisible(visible) {
+				labelsVisible = visible;
+				const title = labelsVisible ? 'Sembunyikan label titik' : 'Tampilkan label titik';
+				$('#peta3dPage').toggleClass('labels-hidden', !labelsVisible);
+				$('#toggleMarkerLabels')
+					.toggleClass('active', !labelsVisible)
+					.attr('aria-pressed', String(!labelsVisible))
+					.attr('aria-label', title)
+					.attr('title', title)
+					.html(markerLabelToggleIcon(labelsVisible));
+				renderMarkers();
+				showToast(labelsVisible ? 'Label titik ditampilkan' : 'Label titik disembunyikan');
+			}
+
 			function showToast(message) {
 				clearTimeout(toastTimer);
 				$('#positionToast').text(message).addClass('show');
@@ -1776,11 +1869,18 @@
 
 			function labelCandidates(marker) {
 				const frame = document.getElementById('markerLayer').getBoundingClientRect();
+				const canvasStyle = window.getComputedStyle(document.getElementById('mapCanvas'));
 				const compact = zoomLevel < 1.25;
-				const labelWidth = compact ? Math.min(140, Math.max(95, frame.width * 0.07)) : Math.min(180, Math.max(125, frame.width * 0.09));
-				const labelHeight = compact ? 27 : 38;
-				const markerGapX = 50;
-				const markerGapY = 48;
+				const labelScale = Number.parseFloat(canvasStyle.getPropertyValue('--label-zoom-scale')) || 1;
+				const labelMaxWidth = Number.parseFloat(canvasStyle.getPropertyValue(compact ? '--label-compact-max-width' : '--label-max-width')) || 145;
+				const labelPaddingY = Number.parseFloat(canvasStyle.getPropertyValue(compact ? '--label-compact-padding-y' : '--label-padding-y')) || 5;
+				const titleSize = Number.parseFloat(canvasStyle.getPropertyValue('--label-title-size')) || 11;
+				const statusSize = compact ? 0 : (Number.parseFloat(canvasStyle.getPropertyValue('--label-status-size')) || 9);
+				const visualZoom = zoomLevel * labelScale;
+				const labelWidth = labelMaxWidth * visualZoom;
+				const labelHeight = ((labelPaddingY * 2) + titleSize + (statusSize ? statusSize + 4 : 0)) * visualZoom;
+				const markerGapX = 50 * visualZoom;
+				const markerGapY = 48 * visualZoom;
 				const widthPct = labelWidth / frame.width * 100;
 				const heightPct = labelHeight / frame.height * 100;
 				const gapXPct = markerGapX / frame.width * 100;
@@ -1870,6 +1970,11 @@
 			}
 
 			function resolveRenderedLabelCollisions() {
+				if (!labelsVisible) {
+					$('#markerLayer').removeClass('is-resolving');
+					return;
+				}
+
 				const canvas = document.getElementById('mapCanvas');
 				const markerElements = Array.from(document.querySelectorAll('.marker'));
 				$('#markerLayer').addClass('is-resolving');
@@ -2472,6 +2577,9 @@
 
 			$('#toggleEditMarkers').on('click', function() {
 				setEditMode(!editMode);
+			});
+			$('#toggleMarkerLabels').on('click', function() {
+				setLabelsVisible(!labelsVisible);
 			});
 			$('#zoomOut').on('click', function() {
 				smoothSetZoom(zoomLevel - zoomStep);
